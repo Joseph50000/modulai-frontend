@@ -35,7 +35,12 @@ export default function AIExecutionDetail() {
           <h1 className="text-2xl font-heading font-semibold tracking-tight">Exécution {ex.id.slice(0, 8)}</h1>
           <p className="text-sm text-muted-foreground mt-1">{ex.use_case}</p>
         </div>
-        <StatusBadge status={ex.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={ex.status} />
+          {ex.human_validation && (
+            <StatusBadge status={ex.human_validation.action} label={ex.human_validation.action === "approved" ? "Validé" : "Rejeté"} />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

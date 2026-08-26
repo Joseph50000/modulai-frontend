@@ -20,6 +20,7 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
   const { user } = useAuth();
   const fields = useCase?.input_schema || [];
   const [values, setValues] = useState({});
+  const [errors, setErrors] = useState({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [comment, setComment] = useState("");
@@ -28,6 +29,25 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
   if (!useCase) return null;
 
   const run = async () => {
+    // Validation des champs requis
+    const newErrors = {};
+    fields.forEach((f) => {
+      if (f.required && (!values[f.name] || String(values[f.name]).trim() === "")) {
+        newErrors[f.name] = "Ce champ est obligatoire";
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Champs requis manquants",
+        description: "Veuillez remplir tous les champs obligatoires avant d'exécuter le Use Case."
+      });
+      return;
+    }
+
     setRunning(true);
     setResult(null);
     try {
@@ -35,6 +55,7 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
         projectId: project.id, projectName: project.name,
         moduleVersionId: moduleVersion.id, useCaseKey: useCase.key,
         inputData: values, provider, user,
+        outputSchema: useCase.output_schema
       });
       setResult(res);
       if (res.status === "error") toast({ variant: "destructive", title: "Exécution échouée", description: res.error });
@@ -90,12 +111,34 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fields.map((f) => (
                   <div key={f.name} className={`space-y-1.5 ${f.type === "array" || f.description?.length > 40 ? "md:col-span-2" : ""}`}>
-                    <Label htmlFor={`f-${f.name}`}>{f.name}{f.required ? " *" : ""}<span className="text-xs text-muted-foreground ml-2 font-mono">{f.type}</span></Label>
+                    <Label htmlFor={`f-${f.name}`} className={errors[f.name] ? "text-destructive" : ""}>
+                      {f.name}{f.required ? " *" : ""}<span className="text-xs text-muted-foreground ml-2 font-mono">{f.type}</span>
+                    </Label>
                     {f.type === "array" ? (
-                      <Textarea id={`f-${f.name}`} rows={2} value={values[f.name] || ""} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })} placeholder={f.description || "Un élément par ligne"} />
+                      <Textarea 
+                        id={`f-${f.name}`} 
+                        rows={2} 
+                        value={values[f.name] || ""} 
+                        onChange={(e) => { 
+                          setValues({ ...values, [f.name]: e.target.value });
+                          if (errors[f.name]) setErrors({ ...errors, [f.name]: null });
+                        }} 
+                        placeholder={f.description || "Un élément par ligne"}
+                        className={errors[f.name] ? "border-destructive focus-visible:ring-destructive" : ""}
+                      />
                     ) : (
-                      <Input id={`f-${f.name}`} value={values[f.name] || ""} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })} placeholder={f.description || ""} />
+                      <Input 
+                        id={`f-${f.name}`} 
+                        value={values[f.name] || ""} 
+                        onChange={(e) => { 
+                          setValues({ ...values, [f.name]: e.target.value });
+                          if (errors[f.name]) setErrors({ ...errors, [f.name]: null });
+                        }} 
+                        placeholder={f.description || ""} 
+                        className={errors[f.name] ? "border-destructive focus-visible:ring-destructive" : ""}
+                      />
                     )}
+                    {errors[f.name] && <p className="text-[0.8rem] font-medium text-destructive">{errors[f.name]}</p>}
                   </div>
                 ))}
               </div>

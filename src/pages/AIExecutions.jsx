@@ -33,6 +33,7 @@ export default function AIExecutions() {
                 <th className="text-left font-medium px-4 py-3 hidden lg:table-cell">Module</th>
                 <th className="text-left font-medium px-4 py-3 hidden sm:table-cell">Modèle</th>
                 <th className="text-left font-medium px-4 py-3">Statut</th>
+                <th className="text-left font-medium px-4 py-3">Validation</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -45,6 +46,9 @@ export default function AIExecutions() {
                   <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">{ex.module_name || "—"}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground font-mono text-xs">{ex.model}</td>
                   <td className="px-4 py-3"><StatusBadge status={ex.status} /></td>
+                  <td className="px-4 py-3">
+                    {ex.human_validation ? <StatusBadge status={ex.human_validation.action} label={ex.human_validation.action === "approved" ? "Validé" : "Rejeté"} /> : <span className="text-muted-foreground text-xs">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-right"><Link to={`/executions/${ex.id}`} className="text-muted-foreground hover:text-foreground"><ArrowRight className="h-4 w-4" /></Link></td>
                 </tr>
               ))}

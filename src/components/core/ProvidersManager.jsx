@@ -52,7 +52,7 @@ export default function ProvidersManager() {
   const remove = async (p) => { await base44.entities.AiProvider.delete(p.id); toast({ title: "Provider supprimé" }); load(); };
   const testConn = async (p) => {
     const res = await testProviderConnection(p);
-    await base44.entities.AiProvider.update(p.id, { last_test_status: res.ok ? "ok" : "error", last_tested_at: new Date().toISOString() });
+    await base44.entities.AiProvider.update(p.id, { last_test_status: res.ok ? "ok" : "error" });
     toast({ title: res.ok ? "Connexion OK" : "Connexion échouée", description: res.message, variant: res.ok ? "default" : "destructive" });
     load();
   };

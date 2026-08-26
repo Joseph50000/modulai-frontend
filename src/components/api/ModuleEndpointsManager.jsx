@@ -22,7 +22,7 @@ export default function ModuleEndpointsManager({ moduleData, onChange }) {
 
   const add = async () => {
     if (!draft.name.trim() || !draft.path.trim()) { toast({ variant: "destructive", title: "Nom et path requis" }); return; }
-    const scopes = draft.scopesInput.split(",").map((s) => s.trim()).filter(Boolean);
+    const scopes = draft.scopesInput.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
     const ep = {
       key: (draft.path.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "") || draft.name.toLowerCase().replace(/\s+/g, "-")),
       name: draft.name.trim(), description: draft.description.trim(), method: draft.method, path: draft.path.trim(),

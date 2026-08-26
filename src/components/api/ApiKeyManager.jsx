@@ -12,6 +12,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { KeyRound, Plus, Copy, Check, Ban, RotateCw, Power, PowerOff } from "lucide-react";
 import { generateApiKey, ENV_LABEL, maskKey } from "@/core/gateway/apiKey";
 import StatusBadge from "@/components/StatusBadge";
+import { recordAudit } from "@/core/ai/auditTrail";
 
 export default function ApiKeyManager({ project, availableScopes, onChange }) {
   const { user } = useAuth();
@@ -34,7 +35,7 @@ export default function ApiKeyManager({ project, availableScopes, onChange }) {
     setSaving(true);
     try {
       const { fullKey, prefix, hash } = await generateApiKey();
-      await base44.entities.ApiKey.create({
+      const apiKeyData = {
         name: form.name.trim(),
         project_id: project.id,
         project_name: project.name,
@@ -47,7 +48,17 @@ export default function ApiKeyManager({ project, availableScopes, onChange }) {
         rate_limit_per_min: Number(form.rate_limit_per_min) || 0,
         rate_limit_per_day: Number(form.rate_limit_per_day) || 0,
         created_by_name: user?.full_name || user?.email || "",
+      };
+      const createdKey = await base44.entities.ApiKey.create(apiKeyData);
+      
+      await recordAudit({
+        project_id: project.id, project_name: project.name,
+        user_id: user?.id, user_name: user?.full_name || user?.email,
+        action: "modified", entity_type: "ApiKey", entity_id: createdKey.id,
+        new_value: { name: apiKeyData.name, environment: apiKeyData.environment },
+        comment: `Clé API "${apiKeyData.name}" créée.`
       });
+
       setCreated({ fullKey });
       setForm({ name: "", environment: "development", expires_at: "", rate_limit_per_min: 0, rate_limit_per_day: 0, scopes: [] });
       await load(); onChange?.();
@@ -56,11 +67,33 @@ export default function ApiKeyManager({ project, availableScopes, onChange }) {
     finally { setSaving(false); }
   };
 
-  const setStatus = async (k, status) => { await base44.entities.ApiKey.update(k.id, { status }); await load(); onChange?.(); };
+  const setStatus = async (k, status) => { 
+    await base44.entities.ApiKey.update(k.id, { status }); 
+    await recordAudit({
+      project_id: project.id, project_name: project.name,
+      user_id: user?.id, user_name: user?.full_name || user?.email,
+      action: "modified", entity_type: "ApiKey", entity_id: k.id,
+      new_value: { status },
+      comment: `Statut de la clé API "${k.name}" changé en ${status}.`
+    });
+    await load(); 
+    onChange?.(); 
+  };
+
   const regenerate = async (k) => {
     const { fullKey, prefix, hash } = await generateApiKey();
     await base44.entities.ApiKey.update(k.id, { secret_hash: hash, key_prefix: prefix, status: "active", last_used_at: null });
-    setCreated({ fullKey }); await load(); onChange?.();
+    await recordAudit({
+      project_id: project.id, project_name: project.name,
+      user_id: user?.id, user_name: user?.full_name || user?.email,
+      action: "modified", entity_type: "ApiKey", entity_id: k.id,
+      new_value: { status: "active", regenerated: true },
+      comment: `Clé API "${k.name}" régénérée.`
+    });
+    setCreated({ fullKey });
+    setOpen(true);
+    await load();
+    onChange?.();
     toast({ title: "Clé régénérée", description: "Copiez le nouveau secret." });
   };
 
@@ -80,8 +113,8 @@ export default function ApiKeyManager({ project, availableScopes, onChange }) {
                   Copiez cette clé maintenant. Pour des raisons de sécurité, elle ne sera plus jamais affichée.
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded-md bg-muted px-3 py-2 text-xs font-mono break-all">{created.fullKey}</code>
-                  <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(created.fullKey); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+                  <Input readOnly value={created.fullKey} className="font-mono text-xs" />
+                  <Button className="shrink-0" size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(created.fullKey); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
                     {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -104,16 +137,14 @@ export default function ApiKeyManager({ project, availableScopes, onChange }) {
                     <div className="space-y-1.5"><Label>Rate limit / jour</Label><Input type="number" value={form.rate_limit_per_day} onChange={(e) => setForm({ ...form, rate_limit_per_day: e.target.value })} placeholder="0 = illimité" /></div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Scopes</Label>
+                    <Label className="mb-2 block">Scopes</Label>
                     {availableScopes.length === 0 ? <p className="text-xs text-muted-foreground">Aucun endpoint exposé. Définissez des endpoints sur les modules pour obtenir des scopes.</p> : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-border p-3 max-h-40 overflow-y-auto">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1">
                         {availableScopes.map((s) => (
-                          <div key={s} className="flex items-center space-x-2">
-                            <Checkbox id={`scope-${s}`} checked={form.scopes.includes(s)} onCheckedChange={() => toggleScope(s)} />
-                            <Label htmlFor={`scope-${s}`} className="text-xs font-mono font-normal cursor-pointer select-none leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                              {s}
-                            </Label>
-                          </div>
+                          <label key={s} className={`flex items-center gap-3 p-3 text-sm cursor-pointer rounded-md border transition-colors ${form.scopes.includes(s) ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted/50'}`}>
+                            <Checkbox checked={form.scopes.includes(s)} onCheckedChange={() => toggleScope(s)} />
+                            <code className="text-xs font-mono break-all">{s}</code>
+                          </label>
                         ))}
                       </div>
                     )}

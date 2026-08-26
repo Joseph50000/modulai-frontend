@@ -29,21 +29,25 @@ export default function RiskModule() {
   const [project, setProject] = useState(null);
   const [risks, setRisks] = useState(null);
   const [riskModule, setRiskModule] = useState(null);
-  const [provider, setProvider] = useState(DEFAULT_PROVIDER);
+  const [providers, setProviders] = useState([]);
+  const [provider, setProvider] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [analyzingId, setAnalyzingId] = useState(null);
 
   const load = async () => {
-    const [p, rks, mods] = await Promise.all([
+    const [p, rks, mods, provs] = await Promise.all([
       base44.entities.Project.get(id),
       base44.entities.Risk.filter({ project_id: id }, "-created_date", 100),
       base44.entities.Module.filter({ name: "Risk Management" }, "-version", 1),
+      base44.entities.AiProvider.filter({ status: "active" })
     ]);
     setProject(p);
     setRisks(rks);
     setRiskModule(mods[0] || null);
+    setProviders(provs);
+    if (provs.length > 0 && !provider) setProvider(provs[0].id);
   };
 
   useEffect(() => { load(); }, [id]);
@@ -133,7 +137,7 @@ export default function RiskModule() {
             <Select value={provider} onValueChange={setProvider}>
               <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {PROVIDER_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

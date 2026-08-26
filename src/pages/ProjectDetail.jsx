@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Cpu, Blocks, ShieldCheck, Plus, ArrowLeft, ArrowRight, Package, Zap, KeyRound } from "lucide-react";
+import { Cpu, Blocks, ShieldCheck, Plus, ArrowLeft, ArrowRight, Package, Zap, KeyRound, Archive } from "lucide-react";
 import { PROVIDER_OPTIONS, DEFAULT_PROVIDER } from "@/lib/platform";
 import UseCaseRunner from "@/components/projects/UseCaseRunner";
 import ProjectCoreConfig from "@/components/core/ProjectCoreConfig";
@@ -21,16 +21,31 @@ export default function ProjectDetail() {
   const [project, setProject] = useState(null);
   const [risks, setRisks] = useState([]);
   const [moduleRecords, setModuleRecords] = useState({});
-  const [provider, setProvider] = useState(DEFAULT_PROVIDER);
+  const [providers, setProviders] = useState([]);
+  const [provider, setProvider] = useState("");
   const [runner, setRunner] = useState(null); // { moduleVersion, useCase }
 
   const load = async () => {
-    const p = await base44.entities.Project.get(id);
+    const [p, r, provs] = await Promise.all([
+      base44.entities.Project.get(id),
+      base44.entities.Risk.filter({ project_id: id }, "-created_date", 100),
+      base44.entities.AiProvider.filter({ status: "active" })
+    ]);
+    
     setProject(p);
-    setRisks(await base44.entities.Risk.filter({ project_id: id }, "-created_date", 100));
+    setRisks(r);
+    setProviders(provs);
+    if (provs.length > 0 && !provider) setProvider(provs[0].id);
+
     const recs = {};
     await Promise.all((p.modules || []).map(async (m) => {
-      try { recs[m.module_id] = await base44.entities.Module.get(m.module_id); } catch (_) { recs[m.module_id] = null; }
+      try { 
+        recs[m.module_id] = await base44.entities.Module.get(m.module_id); 
+      } catch (e) { 
+        console.error("Failed to load module", m.module_id, e);
+        toast({ variant: "destructive", title: "Erreur de chargement", description: `Impossible de charger le module ${m.name}: ${e.message}` });
+        recs[m.module_id] = null; 
+      }
     }));
     setModuleRecords(recs);
   };
@@ -86,7 +101,7 @@ export default function ProjectDetail() {
               <div className="flex items-center gap-2">
                 {useCases.length > 0 && (
                   <select value={provider} onChange={(e) => setProvider(e.target.value)} className="text-xs h-8 rounded-md border border-border bg-background px-2">
-                    {PROVIDER_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                    {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 )}
                 <StatusBadge status="active" label="Actif" />
@@ -108,9 +123,13 @@ export default function ProjectDetail() {
                 {(project.modules || []).map((m) => {
                   const rec = moduleRecords[m.module_id];
                   return (
-                    <div key={m.module_id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div key={m.module_id} className="flex items-center justify-between rounded-lg border border-border p-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-medium flex items-center gap-2">{m.name}<Badge variant="outline" className="font-mono text-xs">v{m.version}</Badge></div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          {m.name}
+                          <Badge variant="outline" className="font-mono text-xs">v{m.version}</Badge>
+                          {rec?.lifecycle === "archived" && <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-500">Archivé</Badge>}
+                        </div>
                         <div className="text-xs text-muted-foreground mt-0.5">{rec ? `${(rec.use_cases || []).length} Use Case(s)` : "—"}</div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -150,9 +169,16 @@ export default function ProjectDetail() {
                 </div>
                 <div className="text-xs text-muted-foreground mt-1.5">{moduleRecord.name} v{moduleRef.version}</div>
                 {uc.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{uc.description}</p>}
-                <Button size="sm" className="w-full mt-4" onClick={() => setRunner({ moduleVersion: moduleRecord, useCase: uc })}>
-                  <Zap className="h-3.5 w-3.5 mr-1.5" /> Exécuter le Use Case
-                </Button>
+                
+                {moduleRecord.lifecycle === "archived" ? (
+                  <Button size="sm" className="w-full mt-4" variant="secondary" disabled>
+                    <Archive className="h-3.5 w-3.5 mr-1.5" /> Module archivé
+                  </Button>
+                ) : (
+                  <Button size="sm" className="w-full mt-4" onClick={() => setRunner({ moduleVersion: moduleRecord, useCase: uc })}>
+                    <Zap className="h-3.5 w-3.5 mr-1.5" /> Exécuter le Use Case
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

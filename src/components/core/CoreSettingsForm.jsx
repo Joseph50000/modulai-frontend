@@ -7,8 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { getCoreSettings } from "@/core/ai/coreConfig";
+import { recordAudit } from "@/core/ai/auditTrail";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function CoreSettingsForm() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [settings, setSettings] = useState(null);
   const [models, setModels] = useState([]);
@@ -23,14 +26,23 @@ export default function CoreSettingsForm() {
   useEffect(() => { load(); }, []);
 
   const save = async () => {
-    await base44.entities.CoreSettings.update(settings.id, {
+    const dataToSave = {
       default_provider: settings.default_provider, default_model_id: settings.default_model_id,
       default_model_name: (models.find((m) => m.id === settings.default_model_id) || {}).name || "",
       default_embedding_model: settings.default_embedding_model, default_vector_store: settings.default_vector_store,
       default_temperature: Number(settings.default_temperature), default_token_limit: Number(settings.default_token_limit),
       default_rag_strategy: settings.default_rag_strategy, default_validation_policy: settings.default_validation_policy,
       current_core_version: settings.current_core_version,
+    };
+    await base44.entities.CoreSettings.update(settings.id, dataToSave);
+    
+    await recordAudit({
+      user_id: user?.id, user_name: user?.full_name || user?.email,
+      action: "modified", entity_type: "CoreSettings", entity_id: settings.id,
+      new_value: dataToSave,
+      comment: "Configuration globale du Core mise à jour."
     });
+
     toast({ title: "Core Settings enregistrées", description: "Les nouvelles exécutions utiliseront ces valeurs par défaut." });
   };
 

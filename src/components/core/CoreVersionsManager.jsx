@@ -27,16 +27,18 @@ export default function CoreVersionsManager() {
   useEffect(() => { load(); }, []);
 
   const save = async (d) => {
-    const rec = { version: d.version, status: d.status || "draft", changes: d.changes || "" };
+    const rec = { version: d.version, status: d.status || "draft", changelog: d.changes || "" };
     if (editing?.id) { await base44.entities.CoreVersion.update(editing.id, rec); toast({ title: "Version mise à jour" }); }
     else { await base44.entities.CoreVersion.create(rec); toast({ title: "Version créée" }); }
     setEditing(null); load();
   };
   const remove = async (v) => { await base44.entities.CoreVersion.delete(v.id); load(); };
   const setCurrentVersion = async (v) => {
-    await base44.entities.CoreVersion.update(v.id, { is_current: true, status: "active", released_at: new Date().toISOString() });
-    const others = (items || []).filter((x) => x.id !== v.id && x.is_current);
-    if (others.length) await base44.entities.CoreVersion.bulkUpdate(others.map((o) => ({ id: o.id, is_current: false })));
+    await base44.entities.CoreVersion.update(v.id, { is_latest: true, status: "active", release_date: new Date().toISOString() });
+    const others = (items || []).filter((x) => x.id !== v.id && x.is_latest);
+    if (others.length > 0) {
+      await Promise.all(others.map(o => base44.entities.CoreVersion.update(o.id, { is_latest: false })));
+    }
     const s = await getCoreSettings();
     await base44.entities.CoreSettings.update(s.id, { current_core_version: v.version });
     toast({ title: "Version courante", description: `Le Core utilise désormais v${v.version}.` });
@@ -53,11 +55,11 @@ export default function CoreVersionsManager() {
         {items?.map((v) => (
           <Card key={v.id}><CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap"><Badge variant="secondary" className="font-mono">v{v.version}</Badge><StatusBadge status={v.status} />{v.is_current && <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200"><CheckCircle2 className="h-3 w-3 mr-1" /> Courante</Badge>}</div>
-              <div className="text-xs text-muted-foreground mt-1">{v.changes || "—"}</div>
+              <div className="flex items-center gap-2 flex-wrap"><Badge variant="secondary" className="font-mono">v{v.version}</Badge><StatusBadge status={v.status} />{v.is_latest && <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200"><CheckCircle2 className="h-3 w-3 mr-1" /> Courante</Badge>}</div>
+              <div className="text-xs text-muted-foreground mt-1">{v.changelog || "—"}</div>
             </div>
             <div className="flex items-center gap-1.5">
-              {!v.is_current && <Button size="sm" variant="outline" onClick={() => setCurrentVersion(v)}>Définir courante</Button>}
+              {!v.is_latest && <Button size="sm" variant="outline" onClick={() => setCurrentVersion(v)}>Définir courante</Button>}
               <Button size="sm" variant="ghost" onClick={() => setEditing(v)}>Éditer</Button>
               <Button size="sm" variant="ghost" onClick={() => remove(v)}><Trash2 className="h-3.5 w-3.5" /></Button>
             </div>
@@ -70,7 +72,7 @@ export default function CoreVersionsManager() {
 }
 
 function VersionDialog({ initial, onClose, onSave }) {
-  const [f, setF] = useState({ version: initial.version || "1.0.0", status: initial.status || "draft", changes: initial.changes || "" });
+  const [f, setF] = useState({ version: initial.version || "1.0.0", status: initial.status || "draft", changes: initial.changelog || "" });
   return (
     <Dialog open onOpenChange={onClose}><DialogContent>
       <DialogHeader><DialogTitle>{initial.id ? "Modifier la version" : "Nouvelle version du Core"}</DialogTitle></DialogHeader>

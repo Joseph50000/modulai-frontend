@@ -19,6 +19,7 @@ export default function ProjectCoreConfig({ project, onSaved }) {
   const [models, setModels] = useState([]);
   const [policies, setPolicies] = useState([]);
   const [kbs, setKbs] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [f, setF] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -36,13 +37,14 @@ export default function ProjectCoreConfig({ project, onSaved }) {
       rag_enabled: !!cfg.rag_enabled,
     });
     (async () => {
-      const [v, m, p, k] = await Promise.all([
+      const [v, m, p, k, provs] = await Promise.all([
         base44.entities.CoreVersion.list("-created_date", 50),
         base44.entities.AiModel.filter({ status: "active" }),
         base44.entities.AiPolicy.filter({ status: "active" }),
         base44.entities.KnowledgeBase.list("-created_date", 50),
+        base44.entities.AiProvider.filter({ status: "active" })
       ]);
-      setVersions(v); setModels(m); setPolicies(p); setKbs(k);
+      setVersions(v); setModels(m); setPolicies(p); setKbs(k); setProviders(provs);
     })();
   }, [project.id]);
 
@@ -97,7 +99,7 @@ export default function ProjectCoreConfig({ project, onSaved }) {
               <SelectTrigger><SelectValue placeholder="Hérité du Core" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>Hériter du Core</SelectItem>
-                {PROVIDER_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

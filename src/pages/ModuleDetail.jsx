@@ -62,6 +62,10 @@ export default function ModuleDetail() {
     await updateModule({ lifecycle: "archived" });
     toast({ title: "Version archivée" });
   };
+  const unarchive = async () => {
+    await updateModule({ lifecycle: "published" });
+    toast({ title: "Version désarchivée", description: "Le module est de nouveau actif." });
+  };
 
   if (!module) return <div className="p-10"><div className="h-6 w-64 bg-muted rounded animate-pulse" /></div>;
 
@@ -77,6 +81,7 @@ export default function ModuleDetail() {
           <StatusBadge status={module.lifecycle} />
           {module.lifecycle === "draft" && <Button size="sm" onClick={publish}><Rocket className="h-4 w-4 mr-1.5" /> Publier</Button>}
           {module.lifecycle === "published" && <Button size="sm" variant="outline" onClick={archive}><Archive className="h-4 w-4 mr-1.5" /> Archiver</Button>}
+          {module.lifecycle === "archived" && <Button size="sm" variant="outline" onClick={unarchive}><Rocket className="h-4 w-4 mr-1.5" /> Désarchiver</Button>}
         </div>
       </PageHeader>
 
