@@ -47,14 +47,14 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
     // On récupère le dernier log de la DB (car le gateway l'a inséré)
     // C'est un peu un hack, l'idéal serait que l'API nous retourne l'ID de l'exécution
     const executions = await base44.entities.AIExecution.list("-created_date", 1);
-    const lastExecutionId = executions.length > 0 ? executions[0].id : "unknown";
+    const lastExecution = executions.length > 0 ? executions[0] : null;
 
     return {
       status: "success",
-      execution_id: lastExecutionId,
-      execution_time: 1500, // On peut mettre une valeur par défaut ou utiliser la DB
-      prompt: { name: useCaseKey, version: "1.0.0" },
-      provider: "Ollama",
+      execution_id: lastExecution ? lastExecution.id : "unknown",
+      execution_time: lastExecution ? lastExecution.execution_time : data.execution_time || 0,
+      prompt: { name: useCaseKey, version: lastExecution?.prompt_version || "1.0.0" },
+      provider: lastExecution?.provider || provider || "ModulAI Core",
       output: parsedOutput,
       context_summary: {
         "base_de_donnees": data.rag_context_used

@@ -22,7 +22,11 @@ export default function ProjectApi() {
   const [project, setProject] = useState(null);
   const [moduleRecords, setModuleRecords] = useState([]);
   const [keys, setKeys] = useState([]);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(() => localStorage.getItem(`modulai-tab-api-${id}`) || "overview");
+  
+  useEffect(() => {
+    localStorage.setItem(`modulai-tab-api-${id}`, tab);
+  }, [tab, id]);
   const baseUrl = (typeof window !== "undefined" && window.location.origin) || "";
 
   const load = async () => {

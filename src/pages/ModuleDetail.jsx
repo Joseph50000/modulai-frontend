@@ -40,7 +40,11 @@ export default function ModuleDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [module, setModule] = useState(null);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(() => localStorage.getItem(`modulai-tab-module-${moduleId}`) || "overview");
+  
+  useEffect(() => {
+    localStorage.setItem(`modulai-tab-module-${moduleId}`, tab);
+  }, [tab, moduleId]);
 
   const load = useCallback(async () => {
     setModule(await base44.entities.Module.get(moduleId));

@@ -30,13 +30,17 @@ export default function ApiDocumentation({ project, moduleRecords, baseUrl }) {
 
       <TabsContent value="endpoints" className="space-y-4 mt-0">
         {endpoints.map(({ ep, m, uc }) => {
-          const body = uc && (uc.input_schema || []).length ? JSON.stringify({ path: ep.path, method: ep.method || "POST", body: exampleBody(uc.input_schema) }) : "";
-          const curl = `curl -X POST ${baseUrl}/functions/apiGateway \\\n  -H "Authorization: Bearer $API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '${body}'`;
+          // L'API Gateway Node.js prend directement les variables dans le body, plus besoin de wrapper {path, method, body}
+          const bodyObj = uc && (uc.input_schema || []).length ? exampleBody(uc.input_schema) : {};
+          const body = JSON.stringify(bodyObj);
+          const cleanPath = ep.path.startsWith('/') ? ep.path : `/${ep.path}`;
+          const apiUrl = `http://localhost:3000/api/dynamic${cleanPath}`;
+          const curl = `curl -X POST ${apiUrl} \\\n  -H "Authorization: Bearer $API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -H "x-project-id: ${project.id}" \\\n  -d '${body}'`;
           return (
             <div key={ep.key} className="rounded-lg border border-border p-4 bg-card text-sm">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="font-mono text-xs">{ep.method || "POST"}</Badge>
-                <code className="font-mono">{baseUrl}/api/v1{ep.path}</code>
+                <code className="font-mono">{apiUrl}</code>
                 <Badge variant="secondary" className="text-xs font-normal">{m.name}</Badge>
               </div>
               {ep.description && <p className="text-muted-foreground mt-2">{ep.description}</p>}

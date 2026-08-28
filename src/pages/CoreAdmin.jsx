@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CoreOverview from "@/components/core/CoreOverview";
@@ -26,7 +26,11 @@ const TABS = [
 ];
 
 export default function CoreAdmin() {
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(() => localStorage.getItem("modulai-tab-core") || "overview");
+  
+  useEffect(() => {
+    localStorage.setItem("modulai-tab-core", tab);
+  }, [tab]);
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
       <PageHeader title="AI Core" subtitle="Infrastructure IA configurable : providers, modèles, routage, prompts, RAG, policies, audit et versionnage. Le Core choisit le modèle pour chaque exécution — les modules restent génériques." />

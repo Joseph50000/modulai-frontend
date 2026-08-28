@@ -147,10 +147,6 @@ export default function ProjectDetail() {
 
       <Separator className="my-8" />
 
-      <ProjectCoreConfig project={project} onSaved={load} />
-
-      <Separator className="my-8" />
-
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-heading font-semibold flex items-center gap-2"><Zap className="h-5 w-5" /> Use Cases IA</h2>
       </div>
@@ -181,36 +177,6 @@ export default function ProjectDetail() {
                 )}
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
-
-      <Separator className="my-8" />
-
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-heading font-semibold flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Risques analysés (module Risk)</h2>
-        {hasRiskModule && <Button variant="outline" size="sm" onClick={() => navigate(`/projects/${id}/risk`)}>Gérer les risques</Button>}
-      </div>
-
-      {risks.length === 0 ? (
-        <EmptyState icon={Package} title="Aucun risque" description={hasRiskModule ? "Ouvrez le module Risk pour créer et analyser votre premier risque." : "Installez le module Risk Management pour commencer."}>
-          {hasRiskModule ? <Button onClick={() => navigate(`/projects/${id}/risk`)}>Ouvrir le module Risk</Button> : <Button asChild variant="outline"><Link to="/modules">Installer le module</Link></Button>}
-        </EmptyState>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {risks.map((r) => (
-            <Link key={r.id} to={`/projects/${id}/risk/${r.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium text-sm">{r.title}</h3>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">{r.processus || "—"} · {r.evenement || "—"}</div>
-                  <div className="mt-3"><StatusBadge status={r.status} /></div>
-                </CardContent>
-              </Card>
-            </Link>
           ))}
         </div>
       )}

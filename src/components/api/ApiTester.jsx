@@ -31,7 +31,7 @@ export default function ApiTester({ project, moduleRecords }) {
     if (!current || !apiKey) return;
     setRunning(true); setResult(null);
     try {
-      const res = await runGateway({ apiKey, path: current.ep.path, method: current.ep.method || "POST", body, clientName: "in-app-tester" });
+      const res = await runGateway({ apiKey, path: current.ep.path, method: current.ep.method || "POST", body, clientName: "in-app-tester", projectId: project.id });
       setResult(res);
     } catch (e) { setResult({ success: false, status_code: 500, error: e.message, request_id: "—" }); }
     finally { setRunning(false); }
@@ -39,11 +39,14 @@ export default function ApiTester({ project, moduleRecords }) {
 
   if (endpoints.length === 0) return <EmptyState icon={Terminal} title="Aucun endpoint à tester" description="Définissez des endpoints sur les modules installés pour les tester via le gateway." />;
 
-  const gatewayUrl = `${window.location.origin}/functions/apiGateway`;
+  const path = current?.ep.path || "";
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const gatewayUrl = `http://localhost:3000/api/dynamic${cleanPath}`;
   const curlCmd = `curl -X POST ${gatewayUrl} \\
   -H "Authorization: Bearer ${apiKey || "<API_KEY>"}" \\
   -H "Content-Type: application/json" \\
-  -d '${JSON.stringify({ path: current?.ep.path, method: current?.ep.method || "POST", body }, null, 2)}'`;
+  -H "x-project-id: ${project.id}" \\
+  -d '${JSON.stringify(body, null, 2)}'`;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
