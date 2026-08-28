@@ -37,8 +37,11 @@ export default function AIExecutionDetail() {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={ex.status} />
-          {ex.human_validation && (
-            <StatusBadge status={ex.human_validation.action} label={ex.human_validation.action === "approved" ? "Validé" : "Rejeté"} />
+          {ex.human_validation !== "none" && (
+            <StatusBadge 
+              status={ex.human_validation === "approved" ? "success" : ex.human_validation === "rejected" ? "error" : "warning"} 
+              label={ex.human_validation === "approved" ? "Validé" : ex.human_validation === "rejected" ? "Rejeté" : "En attente de validation"} 
+            />
           )}
         </div>
       </div>
@@ -54,10 +57,38 @@ export default function AIExecutionDetail() {
         <Card className="mb-6 border-rose-200"><CardContent className="p-4"><div className="text-sm font-medium text-rose-700">Erreur</div><div className="text-sm text-rose-600 mt-1">{ex.error}</div></CardContent></Card>
       )}
 
+      {ex.human_validation !== "none" && (
+        <Card className="mb-6 bg-slate-50 border-slate-200">
+          <CardContent className="p-4">
+            <div className="text-sm font-medium text-slate-800 mb-2">Audit et Justification Humaine</div>
+            <div className="text-sm text-slate-600 bg-white p-3 rounded-md border border-slate-200 shadow-sm">
+              {ex.justification || "Aucune justification renseignée pour le moment."}
+            </div>
+            {(ex.human_validation === "pending" || !ex.human_validation) && (
+               <div className="mt-4 flex gap-3">
+                 <Button size="sm" variant="outline" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200" onClick={async () => {
+                   await base44.entities.AIExecution.update(ex.id, { human_validation: "approved", justification: "Validé par le superviseur." });
+                   setEx({ ...ex, human_validation: "approved", justification: "Validé par le superviseur." });
+                 }}>Approuver</Button>
+                 <Button size="sm" variant="outline" className="bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 border-rose-200" onClick={async () => {
+                   await base44.entities.AIExecution.update(ex.id, { human_validation: "rejected", justification: "Rejeté par le superviseur." });
+                   setEx({ ...ex, human_validation: "rejected", justification: "Rejeté par le superviseur." });
+                 }}>Rejeter</Button>
+               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">Contexte (sources utilisées)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Contexte & Ressources</CardTitle></CardHeader>
           <CardContent>
+            {ex.resources_used && (
+              <div className="mb-4 text-xs font-mono bg-blue-50 text-blue-800 p-2 rounded-md border border-blue-100">
+                {ex.resources_used}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 mb-4">
               {Object.entries(ex.context_reference || {}).map(([k, v]) => (
                 <span key={k} className={`text-xs px-2.5 py-1 rounded-md border ${v ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-400 border-slate-200"}`}>

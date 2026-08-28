@@ -44,13 +44,15 @@ export default function ModelsManager() {
   };
   const remove = async (m) => { await base44.entities.AiModel.delete(m.id); load(); };
   const setDefault = async (m) => {
-    await base44.entities.AiModel.update(m.id, { is_default: true });
-    const others = (items || []).filter((x) => x.id !== m.id && x.is_default);
-    await base44.entities.AiModel.bulkUpdate(others.map((o) => ({ id: o.id, is_default: false })));
-    const settings = await getCoreSettings();
-    await base44.entities.CoreSettings.update(settings.id, { default_model_id: m.id, default_model_name: m.name });
-    toast({ title: "Modèle par défaut", description: `${m.name} sera utilisé par toutes les exécutions (sauf policy contraire).` });
-    load();
+    try {
+      const settings = await getCoreSettings();
+      await base44.entities.CoreSettings.update(settings.id, { default_model_id: m.id, default_model_name: m.name });
+      toast({ title: "Modèle par défaut", description: `${m.name} sera utilisé par toutes les exécutions (sauf policy contraire).` });
+      setDefaultId(m.id);
+      load();
+    } catch (e) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    }
   };
 
   return (

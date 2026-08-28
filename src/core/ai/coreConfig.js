@@ -25,4 +25,36 @@ export const getCoreSettings = async () => {
 };
 export const saveCoreSettings = async () => ({});
 export const hashSecret = (s) => s;
-export const testProviderConnection = async () => ({ success: true });
+export const testProviderConnection = async (provider) => {
+  try {
+    if (!provider.endpoint_url) return { ok: true, message: "Aucun endpoint configuré." };
+    
+    const url = provider.endpoint_url.replace(/\/$/, '');
+    
+    // Si c'est un modèle de type local/Ollama, on peut tester l'endpoint /api/version
+    if (provider.type === 'local' || provider.type === 'mock') {
+      try {
+        const res = await fetch(`${url}/api/version`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          return { ok: false, message: `L'API a répondu avec une erreur HTTP ${res.status} ${res.statusText}` };
+        }
+        
+        const data = await res.json();
+        return { ok: true, message: `Connecté avec succès. Ollama Version : ${data.version || 'inconnue'}` };
+      } catch (err) {
+        return { ok: false, message: `Impossible de se connecter : ${err.message}. (Vérifiez l'URL ou les règles CORS)` };
+      }
+    }
+      
+    // Pour les autres providers, on fait un test générique
+    return { ok: true, message: `URL configurée. (Test approfondi non disponible pour le type ${provider.type})` };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+};

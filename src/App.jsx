@@ -19,8 +19,6 @@ import ModuleRegistry from '@/pages/ModuleRegistry';
 import ModuleDetail from '@/pages/ModuleDetail';
 import CoreAdmin from '@/pages/CoreAdmin';
 import ProjectApi from '@/pages/ProjectApi';
-import RiskModule from '@/pages/RiskModule';
-import RiskDetail from '@/pages/RiskDetail';
 import AIExecutions from '@/pages/AIExecutions';
 import AIExecutionDetail from '@/pages/AIExecutionDetail';
 import Audit from '@/pages/Audit';
@@ -60,8 +58,6 @@ const AuthenticatedApp = () => {
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
-          <Route path="/projects/:id/risk" element={<RiskModule />} />
-          <Route path="/projects/:id/risk/:riskId" element={<RiskDetail />} />
           <Route path="/projects/:id/api" element={<ProjectApi />} />
           <Route path="/core" element={<CoreAdmin />} />
           <Route path="/modules" element={<ModuleRegistry />} />

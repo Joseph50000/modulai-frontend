@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Instance Axios pointant vers notre futur backend Node.js
-const api = axios.create({
+export const api = axios.create({
   baseURL: 'http://localhost:3000/api', 
 });
 
@@ -100,6 +100,12 @@ export const base44 = {
   functions: {
     invoke: async (functionName, params) => {
       const res = await api.post(`/functions/${functionName}`, params);
+      return res.data;
+    }
+  },
+  ai: {
+    execute: async (payload) => {
+      const res = await api.post('/ai/execute', payload);
       return res.data;
     }
   }

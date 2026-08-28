@@ -153,7 +153,7 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
             {result.prompt && <div className="text-xs text-muted-foreground">Prompt utilisé : <span className="font-mono">{result.prompt.name} v{result.prompt.version}</span> · {result.provider}</div>}
             <div>
               <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Sortie structurée</div>
-              <pre className="text-xs bg-muted/60 rounded-lg p-4 overflow-x-auto font-mono leading-relaxed max-h-72 overflow-y-auto">{JSON.stringify(result.output, null, 2)}</pre>
+              <pre className="text-xs bg-muted/60 rounded-lg p-4 font-mono leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap break-words">{JSON.stringify(result.output, null, 2)}</pre>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">{result.context_summary && <span>Contexte : {Object.entries(result.context_summary).filter(([, v]) => v).map(([k]) => k).join(", ") || "aucun"}</span>}</div>
           </div>

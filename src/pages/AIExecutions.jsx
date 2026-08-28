@@ -47,7 +47,12 @@ export default function AIExecutions() {
                   <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground font-mono text-xs">{ex.model}</td>
                   <td className="px-4 py-3"><StatusBadge status={ex.status} /></td>
                   <td className="px-4 py-3">
-                    {ex.human_validation ? <StatusBadge status={ex.human_validation.action} label={ex.human_validation.action === "approved" ? "Validé" : "Rejeté"} /> : <span className="text-muted-foreground text-xs">—</span>}
+                    {ex.human_validation !== "none" ? (
+                      <StatusBadge 
+                        status={ex.human_validation === "approved" ? "success" : ex.human_validation === "rejected" ? "error" : "warning"} 
+                        label={ex.human_validation === "approved" ? "Validé" : ex.human_validation === "rejected" ? "Rejeté" : "En attente"} 
+                      />
+                    ) : <span className="text-muted-foreground text-xs">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right"><Link to={`/executions/${ex.id}`} className="text-muted-foreground hover:text-foreground"><ArrowRight className="h-4 w-4" /></Link></td>
                 </tr>

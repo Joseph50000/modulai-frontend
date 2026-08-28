@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import StatusBadge from "@/components/StatusBadge";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, GitBranch } from "lucide-react";
+import { Plus, GitBranch, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { nextVersion } from "@/lib/modules";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,23 +21,25 @@ export default function ModuleVersionsManager({ module, onNewVersion }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ version: nextVersion(module.version, "patch"), kind: "patch" });
   const [groups, setGroups] = useState(null);
+  const [versionToDelete, setVersionToDelete] = useState(null);
 
   const load = async () => {
     const all = await base44.entities.Module.filter({ module_key: module.module_key }, "-version", 100);
     setGroups(all);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [module.module_key]);
-  const versions = groups || [module];
+  const versions = groups ? groups.map(g => g.id === module.id ? module : g) : [module];
   const sorted = [...versions].sort((a, b) => (b.version || "").localeCompare(a.version || "", "en", { numeric: true }));
 
   const createVersion = async () => {
     if (!form.version.trim()) return;
     const copy = {
       name: module.name, module_key: module.module_key, description: module.description,
-      version: form.version.trim(), previous_version: module.version, core_version: module.core_version,
+      version: form.version.trim(), core_version: module.core_version,
       category: module.category, status: module.status, lifecycle: "draft",
       features: module.features, use_cases: module.use_cases, data_sources: module.data_sources,
       dependencies: module.dependencies, configuration: module.configuration, capabilities: module.capabilities,
+      endpoints: module.endpoints,
     };
     const created = await base44.entities.Module.create(copy);
     await recordAudit({ module_id: created.id, module_name: created.name, user_id: user?.id, user_name: user?.full_name || user?.email, action: "modified", entity_type: "Module", entity_id: created.id, new_value: { version: created.version, from: module.version } });
@@ -45,6 +47,18 @@ export default function ModuleVersionsManager({ module, onNewVersion }) {
     setOpen(false);
     onNewVersion?.(created);
     navigate(`/modules/${created.id}`);
+  };
+
+  const deleteVersion = async (targetId) => {
+    try {
+      await base44.entities.Module.delete(targetId);
+      toast({ title: "Version supprimée" });
+      setVersionToDelete(null);
+      if (targetId === module.id) navigate("/modules");
+      else load();
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer la version." });
+    }
   };
 
   return (
@@ -63,10 +77,31 @@ export default function ModuleVersionsManager({ module, onNewVersion }) {
                 <div className="text-xs text-muted-foreground mt-0.5">{v.previous_version ? `depuis v${v.previous_version}` : "version initiale"}</div>
               </div>
             </div>
-            {v.id !== module.id && <Button variant="outline" size="sm" onClick={() => navigate(`/modules/${v.id}`)}>Ouvrir</Button>}
+            <div className="flex items-center gap-2">
+              {v.id !== module.id && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/modules/${v.id}`)}>Ouvrir</Button>
+                  <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 px-2" onClick={() => setVersionToDelete(v.id)}><Trash2 className="h-4 w-4" /></Button>
+                </>
+              )}
+            </div>
           </div>
         ))}
       </div>
+      
+      <Dialog open={!!versionToDelete} onOpenChange={(val) => { if(!val) setVersionToDelete(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Confirmer la suppression</DialogTitle></DialogHeader>
+          <div className="py-2 text-sm text-muted-foreground">
+            Voulez-vous vraiment supprimer cette version ? Cette action est irréversible et supprimera toutes les configurations associées à cette version.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVersionToDelete(null)}>Annuler</Button>
+            <Button variant="destructive" onClick={() => deleteVersion(versionToDelete)}>Oui, supprimer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Nouvelle version de {module.name}</DialogTitle></DialogHeader>

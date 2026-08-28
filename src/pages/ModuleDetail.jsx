@@ -94,7 +94,7 @@ export default function ModuleDetail() {
         ))}
       </div>
 
-      {tab === "overview" && <ModuleOverview module={module} />}
+      {tab === "overview" && <ModuleOverview module={module} updateModule={updateModule} />}
       {tab === "features" && <ModuleFeaturesManager module={module} updateModule={updateModule} />}
       {tab === "usecases" && <ModuleUseCasesManager module={module} updateModule={updateModule} />}
       {tab === "prompts" && <ModulePromptsManager module={module} />}
