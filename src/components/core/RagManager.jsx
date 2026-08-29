@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import StatusBadge from "@/components/StatusBadge";
-import { Plus, Trash2, RefreshCw, Search, FileText, Upload } from "lucide-react";
-import { indexDocument, reindexKnowledgeBase, semanticSearch } from "@/core/ai/ragLayer";
+import { Plus, Trash2, RefreshCw, Search, FileText, Upload, Link2, Database } from "lucide-react";
+import { ingestFile, ingestUrl, ingestSqlPreset, indexDocument, reindexKnowledgeBase, semanticSearch } from "@/core/ai/ragLayer";
 
 export default function RagManager() {
   const { toast } = useToast();
@@ -21,6 +21,8 @@ export default function RagManager() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState("");
+  const [sqlPreset, setSqlPreset] = useState("");
 
   const load = async () => {
     const list = await base44.entities.KnowledgeBase.list("-created_date", 100);
@@ -37,16 +39,39 @@ export default function RagManager() {
     const file = e.target.files?.[0];
     if (!file || !kbId) { toast({ title: "Sélectionnez d'abord une Knowledge Base", variant: "destructive" }); return; }
     try {
-      const text = await file.text();
-      if (!text || !text.trim()) { toast({ title: "Fichier vide ou binaire", description: "Importez un fichier texte (.txt, .md, .csv).", variant: "destructive" }); return; }
       setBusy(true);
-      const doc = await base44.entities.Document.create({ name: file.name, content: text.slice(0, 200000), knowledge_base_id: kbId, source: "upload", status: "pending", chunks: [], chunk_count: 0 });
-      const n = await indexDocument(doc.id);
-      toast({ title: "Document indexé", description: `${file.name} — ${n} chunks vectorisés.` });
-      reloadDocs();
+      const result = await ingestFile({ knowledgeBaseId: kbId, file });
+      toast({ title: "Document indexé", description: `${file.name} — ${result.chunks || 0} chunks vectorisés.` });
+      await reloadDocs();
     } catch (err) {
-      toast({ title: "Erreur d'indexation", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur d'indexation", description: err.response?.data?.message || err.message, variant: "destructive" });
     } finally { setBusy(false); if (fileRef.current) fileRef.current.value = ""; }
+  };
+
+  const addUrl = async () => {
+    if (!url.trim() || !kbId) return;
+    try {
+      setBusy(true);
+      const result = await ingestUrl({ knowledgeBaseId: kbId, url: url.trim() });
+      toast({ title: "URL indexée", description: `${result.document_id} — ${result.chunks || 0} chunks.` });
+      setUrl("");
+      await reloadDocs();
+    } catch (err) {
+      toast({ title: "Erreur URL", description: err.response?.data?.message || err.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  const runSqlPreset = async () => {
+    if (!sqlPreset.trim()) return;
+    try {
+      setBusy(true);
+      const result = await ingestSqlPreset({ preset: sqlPreset.trim() });
+      toast({ title: "Source SQL indexée", description: `${result.indexed || 0} lignes.` });
+      setSqlPreset("");
+      await reloadDocs();
+    } catch (err) {
+      toast({ title: "Erreur SQL", description: err.response?.data?.message || err.message, variant: "destructive" });
+    } finally { setBusy(false); }
   };
 
   const reindex = async (doc) => { setBusy(true); const n = await indexDocument(doc.id); toast({ title: "Re-indexé", description: `${n} chunks.` }); reloadDocs(); setBusy(false); };
@@ -67,12 +92,22 @@ export default function RagManager() {
           <Select value={kbId} onValueChange={setKbId}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{kbs.map((k) => <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>)}</SelectContent></Select>
         </div>
         <div className="self-end flex gap-2">
-          <input ref={fileRef} type="file" accept=".txt,.md,.csv,.json,.text" onChange={onUpload} className="hidden" />
+          <input ref={fileRef} type="file" accept=".pdf,.docx,.xlsx,.csv,.txt,.md,.text" onChange={onUpload} className="hidden" />
           <Button onClick={() => fileRef.current?.click()} disabled={busy || !kbId}><Upload className="h-4 w-4 mr-1.5" /> Upload & indexer</Button>
           <Button variant="outline" onClick={reindexAll} disabled={busy || !kbId}><RefreshCw className="h-4 w-4 mr-1.5" /> Tout ré-indexer</Button>
         </div>
       </div>
       {!kbId && <p className="text-sm text-muted-foreground">Créez d'abord une Knowledge Base (onglet Knowledge Bases).</p>}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="flex gap-2">
+          <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://exemple.com/procedure" disabled={busy || !kbId} />
+          <Button variant="outline" onClick={addUrl} disabled={busy || !kbId || !url.trim()}><Link2 className="h-4 w-4 mr-1.5" /> URL</Button>
+        </div>
+        <div className="flex gap-2">
+          <Input value={sqlPreset} onChange={(e) => setSqlPreset(e.target.value)} placeholder="Preset SQL autorisé" disabled={busy} />
+          <Button variant="outline" onClick={runSqlPreset} disabled={busy || !sqlPreset.trim()}><Database className="h-4 w-4 mr-1.5" /> SQL</Button>
+        </div>
+      </div>
 
       <div className="space-y-2">
         {docs?.map((d) => (
@@ -87,7 +122,7 @@ export default function RagManager() {
             </div>
           </CardContent></Card>
         ))}
-        {docs && docs.length === 0 && kbId && <p className="text-sm text-muted-foreground">Aucun document. Uploadez un fichier texte (.txt, .md, .csv) — il sera chunké, vectorisé (embedding local 32-d) et indexé.</p>}
+        {docs && docs.length === 0 && kbId && <p className="text-sm text-muted-foreground">Aucun document. Importez un PDF, DOCX, XLSX, CSV, TXT ou Markdown, ajoutez une URL publique, ou lancez un preset SQL autorisé.</p>}
       </div>
 
       <Card><CardContent className="p-4 space-y-3">
