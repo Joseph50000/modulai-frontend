@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Code2, FileJson, BookOpen, Download, Copy, Check } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
+import { dynamicGatewayUrl } from "@/config/runtime";
 
 const generateOpenAPI = (project) => ({ openapi: "3.0.0", info: { title: project?.name || "API", version: "1.0.0" }, paths: {} });
 const listScopes = () => ["execute"];
@@ -34,7 +35,7 @@ export default function ApiDocumentation({ project, moduleRecords, baseUrl }) {
           const bodyObj = uc && (uc.input_schema || []).length ? exampleBody(uc.input_schema) : {};
           const body = JSON.stringify(bodyObj);
           const cleanPath = ep.path.startsWith('/') ? ep.path : `/${ep.path}`;
-          const apiUrl = `http://localhost:3000/api/dynamic${cleanPath}`;
+          const apiUrl = dynamicGatewayUrl(cleanPath);
           const curl = `curl -X POST ${apiUrl} \\\n  -H "Authorization: Bearer $API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -H "x-project-id: ${project.id}" \\\n  -d '${body}'`;
           return (
             <div key={ep.key} className="rounded-lg border border-border p-4 bg-card text-sm">
