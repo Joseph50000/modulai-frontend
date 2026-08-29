@@ -6,11 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import StatusBadge from "@/components/StatusBadge";
-import { Plus, Trash2, RefreshCw, Search, FileText, Upload, Link2, Database } from "lucide-react";
+import { Trash2, RefreshCw, Search, FileText, Upload, Link2, Database, Eye } from "lucide-react";
 import { ingestFile, ingestUrl, ingestSqlPreset, indexDocument, reindexKnowledgeBase, semanticSearch } from "@/core/ai/ragLayer";
+
+const parseJson = (value, fallback) => {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+  try { return JSON.parse(value); } catch { return fallback; }
+};
+
+const formatBytes = (value) => {
+  if (!value) return "—";
+  if (value < 1024) return `${value} o`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} Ko`;
+  return `${(value / (1024 * 1024)).toFixed(1)} Mo`;
+};
 
 export default function RagManager() {
   const { toast } = useToast();
@@ -23,6 +36,7 @@ export default function RagManager() {
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState("");
   const [sqlPreset, setSqlPreset] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   const load = async () => {
     const list = await base44.entities.KnowledgeBase.list("-created_date", 100);
@@ -74,16 +88,43 @@ export default function RagManager() {
     } finally { setBusy(false); }
   };
 
-  const reindex = async (doc) => { setBusy(true); const n = await indexDocument(doc.id); toast({ title: "Re-indexé", description: `${n} chunks.` }); reloadDocs(); setBusy(false); };
-  const remove = async (doc) => { await base44.entities.Document.delete(doc.id); reloadDocs(); };
-  const reindexAll = async () => { if (!kbId) return; setBusy(true); const n = await reindexKnowledgeBase(kbId); toast({ title: "Re-indexation KB", description: `${n} documents.` }); reloadDocs(); setBusy(false); };
+  const reindex = async (doc) => {
+    try {
+      setBusy(true);
+      const n = await indexDocument(doc.id);
+      toast({ title: "Re-indexé", description: `${n} chunks.` });
+      await reloadDocs();
+    } catch (err) { toast({ title: "Erreur de re-indexation", description: err.message, variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
+
+  const remove = async (doc) => {
+    try { await base44.entities.Document.delete(doc.id); await reloadDocs(); }
+    catch (err) { toast({ title: "Suppression impossible", description: err.message, variant: "destructive" }); }
+  };
+
+  const reindexAll = async () => {
+    if (!kbId) return;
+    try {
+      setBusy(true);
+      const n = await reindexKnowledgeBase(kbId);
+      toast({ title: "Re-indexation KB", description: `${n} documents.` });
+      await reloadDocs();
+    } catch (err) { toast({ title: "Erreur de re-indexation", description: err.message, variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
 
   const runSearch = async () => {
     if (!query.trim()) return;
-    setBusy(true);
-    setResults(await semanticSearch({ knowledgeBaseId: kbId || undefined, query, topK: 6 }));
-    setBusy(false);
+    try {
+      setBusy(true);
+      setResults(await semanticSearch({ knowledgeBaseId: kbId || undefined, query, topK: 6 }));
+    } catch (err) { toast({ title: "Recherche impossible", description: err.message, variant: "destructive" }); }
+    finally { setBusy(false); }
   };
+
+  const metadata = selectedDoc ? parseJson(selectedDoc.metadata, {}) : {};
+  const chunks = selectedDoc ? parseJson(selectedDoc.chunks, []) : [];
 
   return (
     <div className="space-y-5">
@@ -114,11 +155,12 @@ export default function RagManager() {
           <Card key={d.id}><CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
               <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="font-medium truncate">{d.name}</span><StatusBadge status={d.status} /></div>
-              <div className="text-xs text-muted-foreground mt-1">{(d.content || "").length.toLocaleString()} chars · {d.chunk_count || 0} chunks · {d.embedding_model || "—"}</div>
+              <div className="text-xs text-muted-foreground mt-1">{(d.content || "").length.toLocaleString()} caractères · {d.chunk_count || 0} chunks · {d.type || "source"} · {d.source || "—"}</div>
             </div>
             <div className="flex items-center gap-1.5">
+              <Button size="sm" variant="outline" onClick={() => setSelectedDoc(d)} disabled={busy}><Eye className="h-3.5 w-3.5 mr-1" /> Voir</Button>
               <Button size="sm" variant="ghost" onClick={() => reindex(d)} disabled={busy}><RefreshCw className="h-3.5 w-3.5" /></Button>
-              <Button size="sm" variant="ghost" onClick={() => remove(d)}><Trash2 className="h-3.5 w-3.5" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => remove(d)} disabled={busy}><Trash2 className="h-3.5 w-3.5" /></Button>
             </div>
           </CardContent></Card>
         ))}
@@ -135,11 +177,32 @@ export default function RagManager() {
           ? <p className="text-sm text-muted-foreground">Aucun passage pertinent. Indexez des documents puis relancez.</p>
           : <div className="space-y-2">{results.map((r, i) => (
             <div key={i} className="rounded-md border border-border p-2.5">
-              <div className="flex items-center justify-between"><span className="text-xs font-medium">{r.source}</span><Badge variant="secondary" className="font-mono">score {r.score.toFixed(3)}</Badge></div>
+              <div className="flex items-center justify-between"><span className="text-xs font-medium">{r.source}</span><Badge variant="secondary" className="font-mono">score {Number(r.score || 0).toFixed(3)}</Badge></div>
               <p className="text-sm text-muted-foreground mt-1 line-clamp-3">{r.passage}</p>
             </div>
           ))}</div>)}
       </CardContent></Card>
+
+      <Dialog open={Boolean(selectedDoc)} onOpenChange={(open) => !open && setSelectedDoc(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedDoc && <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> {selectedDoc.name}</DialogTitle>
+              <DialogDescription>Contenu réellement extrait et indexé dans la Knowledge Base sélectionnée.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 sm:grid-cols-4 text-xs">
+              <div><span className="text-muted-foreground">Statut</span><div className="mt-1"><StatusBadge status={selectedDoc.status} /></div></div>
+              <div><span className="text-muted-foreground">Type</span><div className="font-medium mt-1">{selectedDoc.type || "—"}</div></div>
+              <div><span className="text-muted-foreground">Taille</span><div className="font-medium mt-1">{formatBytes(selectedDoc.size)}</div></div>
+              <div><span className="text-muted-foreground">Chunks</span><div className="font-medium mt-1">{selectedDoc.chunk_count || chunks.length || 0}</div></div>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-3 text-xs break-all"><span className="font-semibold">Source :</span> {selectedDoc.source || "—"}</div>
+            <div><h4 className="font-semibold text-sm mb-2">Métadonnées</h4><pre className="rounded-md bg-muted p-3 text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(metadata, null, 2)}</pre></div>
+            <div><h4 className="font-semibold text-sm mb-2">Contenu extrait</h4><pre className="rounded-md border p-3 text-sm whitespace-pre-wrap max-h-72 overflow-y-auto">{selectedDoc.content || "Aucun contenu extrait."}</pre></div>
+            <div><h4 className="font-semibold text-sm mb-2">Chunks indexés ({chunks.length})</h4><div className="space-y-2">{chunks.length ? chunks.map((chunk, index) => <div key={index} className="rounded-md border p-3 text-sm whitespace-pre-wrap"><div className="text-xs text-muted-foreground mb-1">Chunk {index + 1}</div>{typeof chunk === "string" ? chunk : JSON.stringify(chunk, null, 2)}</div>) : <p className="text-sm text-muted-foreground">Les chunks sont conservés dans Chroma ; aucun aperçu détaillé n’est stocké dans SQLite pour ce document.</p>}</div></div>
+          </>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
