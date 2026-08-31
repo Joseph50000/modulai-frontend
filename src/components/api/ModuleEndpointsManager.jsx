@@ -9,6 +9,11 @@ import { useToast } from "@/components/ui/use-toast";
 
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
+const canonicalUseCaseKey = (moduleKey, useCaseKey) => {
+  if (!useCaseKey) return null;
+  return useCaseKey.includes(":") ? useCaseKey : `${moduleKey}:${useCaseKey}`;
+};
+
 export default function ModuleEndpointsManager({ moduleData, onChange }) {
   const { toast } = useToast();
   const [draft, setDraft] = useState({ name: "", description: "", method: "POST", path: "", use_case_key: "", required_scopes: [], scopesInput: "" });
@@ -26,7 +31,7 @@ export default function ModuleEndpointsManager({ moduleData, onChange }) {
     const ep = {
       key: (draft.path.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "") || draft.name.toLowerCase().replace(/\s+/g, "-")),
       name: draft.name.trim(), description: draft.description.trim(), method: draft.method, path: draft.path.trim(),
-      use_case_key: draft.use_case_key || null, required_scopes: scopes, auth_required: true,
+      use_case_key: canonicalUseCaseKey(moduleData.module_key, draft.use_case_key), required_scopes: scopes, auth_required: true,
     };
     await save([...endpoints, ep]);
     setDraft({ name: "", description: "", method: "POST", path: "", use_case_key: "", required_scopes: [], scopesInput: "" });
@@ -72,7 +77,7 @@ export default function ModuleEndpointsManager({ moduleData, onChange }) {
                   <code className="text-sm font-mono">{ep.path}</code>
                 </div>
                 <div className="text-sm font-medium mt-1">{ep.name}</div>
-                {ep.use_case_key && <div className="text-xs text-muted-foreground">Use Case: <code className="font-mono">{ep.use_case_key}</code></div>}
+                {ep.use_case_key && <div className="text-xs text-muted-foreground">Use Case: <code className="font-mono">{canonicalUseCaseKey(moduleData.module_key, ep.use_case_key)}</code></div>}
                 <div className="flex flex-wrap gap-1 mt-1.5">{(ep.required_scopes || []).map((s) => <Badge key={s} className="text-xs font-mono font-normal">{s}</Badge>)}{(!ep.required_scopes || ep.required_scopes.length === 0) && <span className="text-xs text-muted-foreground">Aucun scope</span>}</div>
               </div>
               <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive shrink-0" onClick={() => remove(ep.key)}><Trash2 className="h-4 w-4" /></Button>
