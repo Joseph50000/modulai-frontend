@@ -7,7 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Play, Terminal, Loader2, CheckCircle2, AlertCircle, KeyRound } from "lucide-react";
 import { runGateway } from "@/core/gateway/gateway";
 import EmptyState from "@/components/EmptyState";
-import { dynamicGatewayUrl } from "@/config/runtime";
+import { publicGatewayUrl } from "@/config/runtime";
 
 export default function ApiTester({ project, moduleRecords }) {
   const endpoints = useMemo(() => (moduleRecords || []).flatMap((m) => (m.endpoints || []).map((ep) => ({ ep, m, uc: (m.use_cases || []).find((u) => u.key === ep.use_case_key) }))), [moduleRecords]);
@@ -42,7 +42,7 @@ export default function ApiTester({ project, moduleRecords }) {
 
   const path = current?.ep.path || "";
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const gatewayUrl = dynamicGatewayUrl(cleanPath);
+  const gatewayUrl = publicGatewayUrl(cleanPath);
   const curlCmd = `curl -X POST ${gatewayUrl} \\
   -H "Authorization: Bearer ${apiKey || "<API_KEY>"}" \\
   -H "Content-Type: application/json" \\
