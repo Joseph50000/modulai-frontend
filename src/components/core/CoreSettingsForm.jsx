@@ -18,10 +18,15 @@ export default function CoreSettingsForm() {
   const [providers, setProviders] = useState([]);
 
   const load = async () => {
-    const s = await getCoreSettings();
-    setSettings(s);
-    setModels(await base44.entities.AiModel.filter({ status: "active" }));
-    setProviders(await base44.entities.AiProvider.filter({ status: "active" }));
+    const [s, ms, ps] = await Promise.all([
+      getCoreSettings(),
+      base44.entities.AiModel.filter({ status: "active" }),
+      base44.entities.AiProvider.filter({ status: "active" }),
+    ]);
+    const selectedProvider = ps.find((p) => p.id === s.default_provider || p.name === s.default_provider || p.type === s.default_provider);
+    setSettings({ ...s, default_provider: selectedProvider?.id || s.default_provider || "" });
+    setModels(ms);
+    setProviders(ps);
   };
   useEffect(() => { load(); }, []);
 
@@ -54,7 +59,7 @@ export default function CoreSettingsForm() {
       <Card><CardContent className="p-5 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div><Label>Default Provider</Label>
-            <Select value={settings.default_provider} onValueChange={(v) => setSettings({ ...settings, default_provider: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{providers.map((p) => <SelectItem key={p.id} value={p.type}>{p.name} ({p.type})</SelectItem>)}</SelectContent></Select>
+            <Select value={settings.default_provider || "__none"} onValueChange={(v) => setSettings({ ...settings, default_provider: v === "__none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Aucun provider" /></SelectTrigger><SelectContent><SelectItem value="__none">Aucun (fallback Core)</SelectItem>{providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.type})</SelectItem>)}</SelectContent></Select>
           </div>
           <div><Label>Default Model</Label>
             <Select value={settings.default_model_id || "__none"} onValueChange={(v) => setSettings({ ...settings, default_model_id: v === "__none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__none">Aucun (fallback mock)</SelectItem>{models.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent></Select>

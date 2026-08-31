@@ -27,7 +27,7 @@ export default function ModuleConfigurationManager({ module, updateModule }) {
     } 
   };
 
-  const selectedModelInfo = dbModels.find(m => m.model_key === draft.model || m.id === draft.model) || null;
+  const selectedModelInfo = dbModels.find((m) => m.id === draft.model || m.model_id === draft.model || m.model_key === draft.model) || null;
   const placeholderTemp = selectedModelInfo && selectedModelInfo.temperature !== null ? `Hérité : ${selectedModelInfo.temperature}` : "(Hérité du modèle)";
   const placeholderTokens = selectedModelInfo && selectedModelInfo.max_output_tokens !== null ? `Hérité : ${selectedModelInfo.max_output_tokens}` : "(Hérité du modèle)";
 
@@ -42,13 +42,18 @@ export default function ModuleConfigurationManager({ module, updateModule }) {
         <div className="space-y-1.5 md:col-span-2">
           <Label>Modèle d'Exécution</Label>
           <Select value={draft.model || "none"} onValueChange={(v) => {
-            const selectedModel = dbModels.find(m => m.model_key === v || m.id === v);
-            setDraft({ ...draft, model: v === "none" ? "" : v, provider: selectedModel ? selectedModel.provider_name : draft.provider });
+            const selectedModel = dbModels.find((m) => m.id === v || m.model_id === v || m.model_key === v);
+            setDraft({
+              ...draft,
+              model: v === "none" ? "" : (selectedModel?.id || v),
+              provider_id: v === "none" ? "" : (selectedModel?.provider_id || draft.provider_id || ""),
+              provider: v === "none" ? "" : (selectedModel?.provider_id || selectedModel?.provider_name || draft.provider || ""),
+            });
           }}>
             <SelectTrigger><SelectValue placeholder="Sélectionner le modèle" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Par défaut (Géré par le Core)</SelectItem>
-              {dbModels.map((m) => <SelectItem key={m.model_key || m.id} value={m.model_key || m.id}>{m.name} ({m.provider_name})</SelectItem>)}
+              {dbModels.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} ({m.provider_name})</SelectItem>)}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">Le choix du modèle inclut automatiquement son Provider (fournisseur).</p>

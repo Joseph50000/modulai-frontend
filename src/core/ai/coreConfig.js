@@ -34,10 +34,12 @@ export const testProviderConnection = async (provider) => {
     // Si c'est un modèle de type local/Ollama, on peut tester l'endpoint /api/version
     if (provider.type === 'local' || provider.type === 'mock') {
       try {
+        const secret = provider.api_key || provider.secret_hash || "";
         const res = await fetch(`${url}/api/version`, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
           }
         });
         
