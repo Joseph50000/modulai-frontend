@@ -1,13 +1,22 @@
 import { useEffect, useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Activity, AlertCircle, CheckCircle2, Clock, Gauge } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 
 export default function ApiLogsViewer({ project }) {
   const [logs, setLogs] = useState(null);
-  const load = async () => setLogs(await base44.entities.ApiLog.filter({ project_id: project.id }, "-created_date", 200));
+  const [error, setError] = useState(null);
+  const load = async () => {
+    try {
+      setError(null);
+      setLogs(await base44.entities.ApiLog.filter({ project_id: project.id }, "-created_date", 200));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || "Impossible de charger les logs API.");
+    }
+  };
   useEffect(() => { load(); }, [project.id]);
   useEffect(() => { const u = setInterval(load, 5000); return () => clearInterval(u); }, [project.id]);
 
@@ -21,6 +30,13 @@ export default function ApiLogsViewer({ project }) {
     return { total, success, errors, avg, rateLimited };
   }, [logs]);
 
+  if (!logs && error) return (
+    <Card><CardContent className="p-5 space-y-3">
+      <div className="flex items-center gap-2 text-rose-700"><AlertCircle className="h-4 w-4" /><span className="font-medium">Chargement des logs impossible</span></div>
+      <p className="text-sm text-muted-foreground">{error}</p>
+      <Button variant="outline" size="sm" onClick={load}>Réessayer</Button>
+    </CardContent></Card>
+  );
   if (!logs) return <div className="h-32 bg-muted rounded-lg animate-pulse" />;
   if (logs.length === 0) return <EmptyState icon={Activity} title="Aucun appel API enregistré" description="Les appels transitant par l'API Gateway (tester ou externe) apparaîtront ici." />;
 
