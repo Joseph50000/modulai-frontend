@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Cpu, Blocks, ShieldCheck, Plus, ArrowLeft, ArrowRight, Package, Zap, KeyRound, Archive } from "lucide-react";
+import { Cpu, Blocks, ShieldCheck, Plus, ArrowLeft, ArrowRight, Package, Zap, KeyRound, Archive, RefreshCw } from "lucide-react";
 import { PROVIDER_OPTIONS, DEFAULT_PROVIDER } from "@/lib/platform";
 import UseCaseRunner from "@/components/projects/UseCaseRunner";
 import ProjectCoreConfig from "@/components/core/ProjectCoreConfig";
@@ -24,9 +24,12 @@ export default function ProjectDetail() {
   const [providers, setProviders] = useState([]);
   const [provider, setProvider] = useState("");
   const [runner, setRunner] = useState(null); // { moduleVersion, useCase }
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
-    const [p, r, provs] = await Promise.all([
+    setRefreshing(true);
+    try {
+      const [p, r, provs] = await Promise.all([
       base44.entities.Project.get(id),
       base44.entities.Risk.filter({ project_id: id }, "-created_date", 100),
       base44.entities.AiProvider.filter({ status: "active" })
@@ -47,10 +50,22 @@ export default function ProjectDetail() {
         recs[m.module_id] = null; 
       }
     }));
-    setModuleRecords(recs);
+      setModuleRecords(recs);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    load();
+    const refreshOnReturn = () => { if (!document.hidden) load(); };
+    window.addEventListener("focus", refreshOnReturn);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+    return () => {
+      window.removeEventListener("focus", refreshOnReturn);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
+  }, [id]);
 
   if (!project) return <div className="p-10"><div className="h-6 w-64 bg-muted rounded animate-pulse" /></div>;
 
@@ -76,6 +91,9 @@ export default function ProjectDetail() {
 
       <PageHeader title={project.name} subtitle={project.description || "Aucune description"}>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={load} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} /> Actualiser
+          </Button>
           <Button variant="outline" onClick={() => navigate(`/projects/${id}/api`)}>
             <KeyRound className="h-4 w-4 mr-2" /> API & Integrations
           </Button>
