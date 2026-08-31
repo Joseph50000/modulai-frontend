@@ -9,7 +9,13 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
   if (module.endpoints) {
     try {
       const endpoints = typeof module.endpoints === "string" ? JSON.parse(module.endpoints) : module.endpoints;
-      const endpoint = endpoints.find(e => e.use_case_key === useCaseKey);
+      const qualifiedUseCaseKey = module.module_key ? `${module.module_key}:${useCaseKey}` : null;
+      const endpoint = endpoints.find((e) => {
+        const endpointUseCaseKey = String(e.use_case_key || '');
+        return endpointUseCaseKey === useCaseKey
+          || endpointUseCaseKey === qualifiedUseCaseKey
+          || endpointUseCaseKey.split(':').pop() === useCaseKey;
+      });
       if (endpoint) {
         endpointPath = endpoint.path.replace(/^\/+/, '');
       }
@@ -31,6 +37,9 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
       }
     });
     const data = res.data;
+    if (data.status !== "success") {
+      throw new Error(data.error || data.message || "Le AI Core n’a pas pu générer de réponse.");
+    }
 
     // Le Gateway ou l'AI Core a créé l'enregistrement dans AIExecution.
     // Mais on doit retourner le résultat formaté pour le composant UseCaseRunner.

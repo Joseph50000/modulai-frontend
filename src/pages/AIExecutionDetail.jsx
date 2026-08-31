@@ -24,6 +24,13 @@ export default function AIExecutionDetail() {
 
   if (!ex) return <div className="p-10"><div className="h-6 w-64 bg-muted rounded animate-pulse" /></div>;
 
+  const validationState = typeof ex.human_validation === "object"
+    ? ex.human_validation?.action
+    : ex.human_validation;
+  const validationComment = typeof ex.human_validation === "object"
+    ? ex.human_validation?.comment
+    : "";
+
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto">
       <Button variant="ghost" size="sm" onClick={() => navigate("/executions")} className="mb-4 -ml-2 text-muted-foreground">
@@ -37,10 +44,10 @@ export default function AIExecutionDetail() {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={ex.status} />
-          {ex.human_validation !== "none" && (
+          {validationState && validationState !== "none" && (
             <StatusBadge 
-              status={ex.human_validation === "approved" ? "success" : ex.human_validation === "rejected" ? "error" : "warning"} 
-              label={ex.human_validation === "approved" ? "Validé" : ex.human_validation === "rejected" ? "Rejeté" : "En attente de validation"} 
+              status={validationState === "approved" ? "success" : validationState === "rejected" ? "error" : "warning"}
+              label={validationState === "approved" ? "Validé" : validationState === "rejected" ? "Rejeté" : "En attente de validation"}
             />
           )}
         </div>
@@ -57,14 +64,14 @@ export default function AIExecutionDetail() {
         <Card className="mb-6 border-rose-200"><CardContent className="p-4"><div className="text-sm font-medium text-rose-700">Erreur</div><div className="text-sm text-rose-600 mt-1">{ex.error}</div></CardContent></Card>
       )}
 
-      {ex.human_validation !== "none" && (
+      {validationState && validationState !== "none" && (
         <Card className="mb-6 bg-slate-50 border-slate-200">
           <CardContent className="p-4">
             <div className="text-sm font-medium text-slate-800 mb-2">Audit et Justification Humaine</div>
             <div className="text-sm text-slate-600 bg-white p-3 rounded-md border border-slate-200 shadow-sm">
-              {ex.justification || "Aucune justification renseignée pour le moment."}
+              {ex.justification || validationComment || "Aucune justification renseignée pour le moment."}
             </div>
-            {(ex.human_validation === "pending" || !ex.human_validation) && (
+            {(validationState === "pending" || !validationState) && (
                <div className="mt-4 flex gap-3">
                  <Button size="sm" variant="outline" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200" onClick={async () => {
                    await base44.entities.AIExecution.update(ex.id, { human_validation: "approved", justification: "Validé par le superviseur." });
@@ -86,7 +93,7 @@ export default function AIExecutionDetail() {
           <CardContent>
             {ex.resources_used && (
               <div className="mb-4 text-xs font-mono bg-blue-50 text-blue-800 p-2 rounded-md border border-blue-100">
-                {ex.resources_used}
+                {typeof ex.resources_used === "string" ? ex.resources_used : JSON.stringify(ex.resources_used, null, 2)}
               </div>
             )}
             <div className="flex flex-wrap gap-2 mb-4">

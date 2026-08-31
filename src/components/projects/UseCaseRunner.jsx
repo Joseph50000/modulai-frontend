@@ -80,8 +80,9 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
         module_id: moduleVersion.id, module_name: moduleVersion.name,
         use_case: useCase.key,
         user_id: user?.id, user_name: user?.full_name || user?.email,
-        action, entity_type: "AIExecution", entity_id: result.execution_id,
-        new_value: result.output, comment, execution_id: result.execution_id,
+        action: action === "approved" ? "ai_execution_approved" : "ai_execution_rejected",
+        entity_type: "AIExecution", entity_id: result.execution_id,
+        new_value: result.output, comment,
       });
       toast({ title: action === "approved" ? "Résultat validé" : "Résultat rejeté" });
       setResult((r) => ({ ...r, validated: true, decision: action }));
