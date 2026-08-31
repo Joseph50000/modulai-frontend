@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,9 @@ const USE_CASE_TYPES = ["analysis", "generation", "extraction", "classification"
 export default function ModuleUseCasesManager({ module, updateModule }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(null);
+  const [collections, setCollections] = useState([]);
   const useCases = module.use_cases || [];
+  useEffect(() => { base44.entities.RagCollection.list("-created_date", 200).then(setCollections).catch(() => setCollections([])); }, []);
   const features = module.features || [];
 
   const [form, setForm] = useState({ name: "", description: "", type: "analysis", feature_key: "", prompt_name: "", input_schema: [], output_schema: [] });
@@ -32,6 +35,7 @@ export default function ModuleUseCasesManager({ module, updateModule }) {
       prompt_name: form.prompt_name.trim() || key,
       input_schema: form.input_schema,
       output_schema: form.output_schema,
+      rag_config: { enabled: false },
     };
     await updateModule({ use_cases: [...useCases, uc] });
     setForm({ name: "", description: "", type: "analysis", feature_key: "", prompt_name: "", input_schema: [], output_schema: [] });
@@ -77,6 +81,15 @@ export default function ModuleUseCasesManager({ module, updateModule }) {
               <div className="border-t border-border p-4 space-y-5 bg-muted/30">
                 <SchemaFieldsEditor title="Schéma d'entrée (données nécessaires à l'IA)" fields={uc.input_schema || []} onChange={(input_schema) => patchUc(uc.key, { input_schema })} />
                 <SchemaFieldsEditor title="Schéma de sortie (ce que l'IA doit retourner)" fields={uc.output_schema || []} onChange={(output_schema) => patchUc(uc.key, { output_schema })} />
+                <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+                  <div><div className="font-medium text-sm">Configuration RAG du use case</div><p className="text-xs text-muted-foreground">Cette collection est prioritaire sur la configuration RAG du module.</p></div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1.5"><Label className="text-xs">Collection</Label><Select value={uc.rag_config?.collection || "none"} onValueChange={(v) => patchUc(uc.key, { rag_config: { ...(uc.rag_config || {}), enabled: v !== "none", collection: v === "none" ? "" : v } })}><SelectTrigger className="h-9"><SelectValue placeholder="Aucune" /></SelectTrigger><SelectContent><SelectItem value="none">Aucune collection</SelectItem>{collections.filter((c) => !c.status || c.status === "active").map((c) => <SelectItem key={c.id} value={c.collection_name}>{c.name} ({c.collection_name})</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Knowledge Base ID</Label><Input className="h-9 font-mono text-xs" value={uc.rag_config?.knowledge_base_id || ""} onChange={(e) => patchUc(uc.key, { rag_config: { ...(uc.rag_config || {}), knowledge_base_id: e.target.value } })} placeholder="kb-gpr-regulatory" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Top K</Label><Input className="h-9" type="number" min="1" max="20" value={uc.rag_config?.top_k || 5} onChange={(e) => patchUc(uc.key, { rag_config: { ...(uc.rag_config || {}), top_k: Number(e.target.value) || 5 } })} /></div>
+                  </div>
+                  {uc.rag_config?.enabled && <Badge variant="secondary">RAG actif · {uc.rag_config.collection}</Badge>}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Type d'analyse</Label>
