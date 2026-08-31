@@ -14,6 +14,7 @@ import ApiScopesViewer from "@/components/api/ApiScopesViewer";
 import ApiLogsViewer from "@/components/api/ApiLogsViewer";
 import ApiDocumentation from "@/components/api/ApiDocumentation";
 import ApiTester from "@/components/api/ApiTester";
+import ProjectCorsSettings from "@/components/api/ProjectCorsSettings";
 import { listScopes } from "@/core/gateway/openapi";
 
 export default function ProjectApi() {
@@ -53,7 +54,8 @@ export default function ProjectApi() {
       <PageHeader title="API & Integrations" subtitle={`Exposition sécurisée des fonctionnalités du projet « ${project.name} ». Clés d'API, scopes, gateway, logs et documentation auto-générée.`} />
 
       <Tabs value={tab} onValueChange={setTab} className="mt-6">
-        <TabsList className="w-full justify-start overflow-x-auto grid grid-cols-3 sm:grid-cols-7 h-auto">
+                  <TabsList className="w-full justify-start overflow-x-auto grid grid-cols-3 sm:grid-cols-8 h-auto">
+
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="keys" className="text-xs">API Keys</TabsTrigger>
           <TabsTrigger value="endpoints" className="text-xs">Endpoints</TabsTrigger>
@@ -61,6 +63,7 @@ export default function ProjectApi() {
           <TabsTrigger value="usage" className="text-xs">Usage</TabsTrigger>
           <TabsTrigger value="docs" className="text-xs">Documentation</TabsTrigger>
           <TabsTrigger value="tester" className="text-xs">Tester</TabsTrigger>
+          <TabsTrigger value="cors" className="text-xs">CORS</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -115,6 +118,7 @@ export default function ProjectApi() {
         <TabsContent value="usage" className="mt-6"><ApiLogsViewer project={project} /></TabsContent>
         <TabsContent value="docs" className="mt-6"><ApiDocumentation project={project} moduleRecords={moduleRecords} baseUrl={baseUrl} /></TabsContent>
         <TabsContent value="tester" className="mt-6"><ApiTester project={project} moduleRecords={moduleRecords} /></TabsContent>
+        <TabsContent value="cors" className="mt-6"><ProjectCorsSettings project={project} onSaved={load} /></TabsContent>
       </Tabs>
     </div>
   );
