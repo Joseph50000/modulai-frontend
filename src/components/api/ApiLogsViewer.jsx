@@ -16,8 +16,8 @@ export default function ApiLogsViewer({ project }) {
     const total = arr.length;
     const success = arr.filter((l) => l.status_code === 200).length;
     const errors = arr.filter((l) => l.status_code >= 400).length;
-    const avg = total ? Math.round(arr.reduce((s, l) => s + (l.execution_time || 0), 0) / total) : 0;
-    const rateLimited = arr.filter((l) => l.rate_limited).length;
+    const avg = total ? Math.round(arr.reduce((s, l) => s + (l.duration ?? l.execution_time ?? 0), 0) / total) : 0;
+    const rateLimited = arr.filter((l) => l.rate_limited || l.status_code === 429).length;
     return { total, success, errors, avg, rateLimited };
   }, [logs]);
 
@@ -50,10 +50,10 @@ export default function ApiLogsViewer({ project }) {
               {logs.map((l) => (
                 <tr key={l.id} className="hover:bg-muted/30">
                   <td className="p-2.5"><code className="text-xs font-mono">{l.request_id}</code><div className="text-xs text-muted-foreground">{l.client_name || "—"} · {l.ip || ""}</div></td>
-                  <td className="p-2.5"><Badge variant="outline" className="text-xs font-mono mr-1">{l.method}</Badge><code className="text-xs font-mono">{l.endpoint_path}</code></td>
+                  <td className="p-2.5"><Badge variant="outline" className="text-xs font-mono mr-1">{l.method}</Badge><code className="text-xs font-mono">{l.endpoint || l.endpoint_path || "—"}</code></td>
                   <td className="p-2.5 text-xs">{l.api_key_name || "—"}</td>
                   <td className="p-2.5"><StatusPill code={l.status_code} rateLimited={l.rate_limited} /></td>
-                  <td className="p-2.5 text-xs text-muted-foreground">{l.execution_time || 0} ms</td>
+                  <td className="p-2.5 text-xs text-muted-foreground">{l.duration ?? l.execution_time ?? 0} ms</td>
                   <td className="p-2.5 text-xs text-muted-foreground">{new Date(l.created_date).toLocaleString()}</td>
                 </tr>
               ))}
