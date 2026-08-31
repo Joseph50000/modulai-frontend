@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import StatusBadge from "@/components/StatusBadge";
 import { Trash2, RefreshCw, Search, FileText, Upload, Link2, Database, Eye } from "lucide-react";
 import { ingestFile, ingestUrl, ingestSqlPreset, indexDocument, reindexKnowledgeBase, semanticSearch } from "@/core/ai/ragLayer";
+import RagCollectionsManager from "./RagCollectionsManager";
 
 const parseJson = (value, fallback) => {
   if (!value) return fallback;
@@ -128,6 +129,7 @@ export default function RagManager() {
 
   return (
     <div className="space-y-5">
+      <RagCollectionsManager />
       <div className="flex items-center gap-3 flex-wrap">
         <div className="min-w-60"><Label>Knowledge Base</Label>
           <Select value={kbId} onValueChange={setKbId}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{kbs.map((k) => <SelectItem key={k.id} value={k.id}>{k.name}</SelectItem>)}</SelectContent></Select>
