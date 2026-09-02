@@ -32,8 +32,7 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
   try {
     const res = await api.post(`/dynamic/${endpointPath}`, inputData, {
       headers: {
-        'x-project-id': projectId || '',
-        'x-project-name': projectName || ''
+        'x-project-id': projectId || ''
       }
     });
     const data = res.data;
