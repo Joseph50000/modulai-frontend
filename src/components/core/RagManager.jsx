@@ -37,6 +37,7 @@ export default function RagManager() {
   const [url, setUrl] = useState("");
   const [sqlPreset, setSqlPreset] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedCollection, setSelectedCollection] = useState(null);
   const [modal, setModal] = useState(null);
 
   const load = async () => {
@@ -56,7 +57,7 @@ export default function RagManager() {
     if (!file || !kbId) return;
     try {
       setBusy(true);
-      const result = await ingestFile({ knowledgeBaseId: kbId, file });
+      const result = await ingestFile({ knowledgeBaseId: kbId, collection: selectedCollection?.collection_name, file });
       toast({ title: "Document indexé", description: `${file.name} — ${result.chunks || 0} chunks vectorisés.` });
       setModal(null); await reloadDocs();
     } catch (err) { toast({ title: "Erreur d’indexation", description: err.response?.data?.message || err.message, variant: "destructive" }); }
@@ -65,7 +66,7 @@ export default function RagManager() {
   const addUrl = async () => {
     if (!url.trim() || !kbId) return;
     try {
-      setBusy(true); const result = await ingestUrl({ knowledgeBaseId: kbId, url: url.trim() });
+      setBusy(true); const result = await ingestUrl({ knowledgeBaseId: kbId, collection: selectedCollection?.collection_name, url: url.trim() });
       toast({ title: "URL indexée", description: `${result.document_id} — ${result.chunks || 0} chunks.` });
       setUrl(""); setModal(null); await reloadDocs();
     } catch (err) { toast({ title: "Erreur URL", description: err.response?.data?.message || err.message, variant: "destructive" }); }
@@ -115,7 +116,7 @@ export default function RagManager() {
 
       {!kbId && <Card><CardContent className="p-8 text-center"><Layers3 className="h-8 w-8 mx-auto text-muted-foreground mb-3" /><p className="font-medium">Aucune Knowledge Base sélectionnée</p><p className="text-sm text-muted-foreground mt-1">Créez ou sélectionnez une base avant d’ajouter des sources.</p></CardContent></Card>}
 
-      <RagCollectionsManager />
+      <RagCollectionsManager onCollectionChange={(collection) => { setSelectedCollection(collection); if (collection.knowledge_base_id) setKbId(collection.knowledge_base_id); }} />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="hover:border-primary/40 transition-colors"><CardContent className="p-5"><Link2 className="h-5 w-5 text-primary mb-3" /><h3 className="font-semibold">Source URL</h3><p className="text-sm text-muted-foreground mt-1 mb-4">Indexer une page publique ou une procédure en ligne.</p><Button variant="outline" className="w-full" onClick={() => setModal("url")} disabled={busy || !kbId}><Plus className="h-4 w-4 mr-2" /> Ajouter une URL</Button></CardContent></Card>
