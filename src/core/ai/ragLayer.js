@@ -37,8 +37,8 @@ export const reindexKnowledgeBase = async (knowledgeBaseId) => {
   return response.data.documents || 0;
 };
 
-export const semanticSearch = async ({ knowledgeBaseId, query, topK = 5, filter } = {}) => {
-  const response = await api.post("/rag/search", { knowledgeBaseId, query, topK, filter });
+export const semanticSearch = async ({ knowledgeBaseId, collection, query, topK = 5, filter } = {}) => {
+  const response = await api.post("/rag/search", { knowledgeBaseId, collection, query, topK, filter });
   return (response.data || []).map((result) => ({
     id: result.id,
     source: result.metadata?.document_name || result.metadata?.source || "Knowledge Base",
