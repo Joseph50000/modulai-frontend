@@ -48,7 +48,7 @@ export const semanticSearch = async ({ knowledgeBaseId, query, topK = 5, filter 
   }));
 };
 
-export const inspectCollection = async (collectionId, limit = 100) => {
-  const response = await api.get(`/rag/collection/${encodeURIComponent(collectionId)}/inspect`, { params: { limit } });
+export const inspectCollection = async (collectionId, limit = 100, offset = 0) => {
+  const response = await api.get(`/rag/collection/${encodeURIComponent(collectionId)}/inspect`, { params: { limit, offset } });
   return response.data;
 };

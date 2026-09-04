@@ -12,6 +12,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { Trash2, RefreshCw, Search, FileText, Upload, Link2, Database, Eye, Plus, Layers3 } from "lucide-react";
 import { ingestFile, ingestUrl, ingestSqlPreset, indexDocument, reindexKnowledgeBase, semanticSearch } from "@/core/ai/ragLayer";
 import RagCollectionsManager from "./RagCollectionsManager";
+import ChromaExplorer from "./ChromaExplorer";
 
 const parseJson = (value, fallback) => {
   if (!value) return fallback;
@@ -116,6 +117,7 @@ export default function RagManager() {
 
       {!kbId && <Card><CardContent className="p-8 text-center"><Layers3 className="h-8 w-8 mx-auto text-muted-foreground mb-3" /><p className="font-medium">Aucune Knowledge Base sélectionnée</p><p className="text-sm text-muted-foreground mt-1">Créez ou sélectionnez une base avant d’ajouter des sources.</p></CardContent></Card>}
 
+      <ChromaExplorer />
       <RagCollectionsManager onCollectionChange={(collection) => { setSelectedCollection(collection); if (collection.knowledge_base_id) setKbId(collection.knowledge_base_id); }} />
 
       <div className="grid gap-4 md:grid-cols-3">
