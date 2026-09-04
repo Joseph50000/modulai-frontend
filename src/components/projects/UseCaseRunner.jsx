@@ -13,12 +13,18 @@ import { executeModuleUseCase } from "@/core/ai/moduleExecution";
 import { recordAudit } from "@/core/ai/auditTrail";
 import { Link } from "react-router-dom";
 
+const parseSchema = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return [];
+  try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+};
+
 // Runs a use case defined inside a stored module, using only the Core engine.
 // Builds the input form dynamically from the use case input_schema.
 export default function UseCaseRunner({ open, onOpenChange, project, moduleVersion, useCase, provider }) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const fields = useCase?.input_schema || [];
+  const fields = parseSchema(useCase?.input_schema ?? useCase?.inputSchema);
   const [values, setValues] = useState({});
   const [errors, setErrors] = useState({});
   const [running, setRunning] = useState(false);
