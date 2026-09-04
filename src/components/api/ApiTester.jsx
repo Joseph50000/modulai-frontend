@@ -9,8 +9,21 @@ import { runGateway } from "@/core/gateway/gateway";
 import EmptyState from "@/components/EmptyState";
 import { publicGatewayUrl } from "@/config/runtime";
 
+const parseSchema = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return [];
+  try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+};
+
+const useCaseForEndpoint = (module, endpoint) => {
+  const useCases = Array.isArray(module.use_cases) ? module.use_cases : [];
+  return useCases.find((u) => u.key === endpoint.use_case_key
+    || `${module.module_key || module.key}:${u.key}` === endpoint.use_case_key
+    || endpoint.use_case_key?.endsWith(`:${u.key}`));
+};
+
 export default function ApiTester({ project, moduleRecords }) {
-  const endpoints = useMemo(() => (moduleRecords || []).flatMap((m) => (m.endpoints || []).map((ep) => ({ ep, m, uc: (m.use_cases || []).find((u) => u.key === ep.use_case_key) }))), [moduleRecords]);
+  const endpoints = useMemo(() => (moduleRecords || []).flatMap((m) => (m.endpoints || []).map((ep) => ({ ep, m, uc: useCaseForEndpoint(m, ep) }))), [moduleRecords]);
   const [selKey, setSelKey] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [body, setBody] = useState({});
@@ -23,7 +36,7 @@ export default function ApiTester({ project, moduleRecords }) {
     setSelKey(k);
     const c = endpoints.find((x) => x.ep.key === k);
     const b = {};
-    (c?.uc?.input_schema || []).forEach((f) => { b[f.name] = f.type === "number" ? "" : f.type === "array" ? [] : ""; });
+    parseSchema(c?.uc?.input_schema ?? c?.uc?.inputSchema).forEach((f) => { b[f.name] = f.type === "number" ? "" : f.type === "array" ? [] : ""; });
     setBody(b);
     setResult(null);
   };
@@ -69,7 +82,7 @@ export default function ApiTester({ project, moduleRecords }) {
           <p className="text-xs text-muted-foreground">Collez une clé créée dans l'onglet « API Keys ». La clé détermine le projet et les scopes.</p>
         </div>
 
-        {current?.uc?.input_schema?.map((f) => (
+        {parseSchema(current?.uc?.input_schema ?? current?.uc?.inputSchema).map((f) => (
           <div key={f.name} className="space-y-1">
             <Label className="text-xs">{f.name} {f.required && <span className="text-destructive">*</span>} <span className="text-muted-foreground font-normal">({f.type})</span></Label>
             {f.type === "array" ? (
