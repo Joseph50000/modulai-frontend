@@ -32,7 +32,7 @@ export default function CoreAdmin() {
     localStorage.setItem("modulai-tab-core", tab);
   }, [tab]);
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+    <div className="w-full p-0">
       <PageHeader title="AI Core" subtitle="Infrastructure IA configurable : providers, modèles, routage, prompts, RAG, policies, audit et versionnage. Le Core choisit le modèle pour chaque exécution — les modules restent génériques." />
       <Tabs value={tab} onValueChange={setTab} className="mt-6">
         <TabsList className="w-full justify-start overflow-x-auto grid grid-cols-4 sm:grid-cols-10 h-auto">
