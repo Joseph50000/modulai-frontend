@@ -80,7 +80,7 @@ export default function Projects() {
   };
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+    <div className="w-full p-0">
       <PageHeader title="Projects" subtitle="Un projet est une application assemblée à partir du AI Core et de modules métier versionnés.">
         <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" /> Nouveau projet</Button>
       </PageHeader>

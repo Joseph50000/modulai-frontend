@@ -15,7 +15,7 @@ export default function AIExecutions() {
   useEffect(() => { (async () => setExecutions(await base44.entities.AIExecution.list("-created_date", 100)))(); }, []);
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+    <div className="w-full p-0">
       <PageHeader title="AI Executions" subtitle="Chaque appel au moteur IA est tracé : modèle, version du prompt, contexte, sortie structurée et durée." />
 
       {!executions ? (
