@@ -41,7 +41,7 @@ export default function Dashboard() {
   const { projects, modules, executions, risks, audits } = data;
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+    <div className="w-full p-0">
       <PageHeader
         title="Dashboard"
         subtitle={`Plateforme modulaire d'applications IA — AI Core v${CORE_VERSION}. Assemblez un Core générique et des modules métier versionnés pour construire des applications IA.`}

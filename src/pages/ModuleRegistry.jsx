@@ -92,7 +92,7 @@ export default function ModuleRegistry() {
   };
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+    <div className="w-full p-0">
       <PageHeader title="Module Registry" subtitle="Gérez vos modules métier versionnés, leurs fonctionnalités, Use Cases IA, prompts et schémas. Le Core les exécute sans modification du code.">
         <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-2" /> Créer un module</Button>
       </PageHeader>

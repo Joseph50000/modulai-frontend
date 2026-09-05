@@ -25,7 +25,7 @@ export default function Audit() {
   useEffect(() => { (async () => setEvents(await base44.entities.AuditEvent.list("-created_date", 100)))(); }, []);
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+    <div className="w-full p-0">
       <PageHeader title="Audit Trail" subtitle="Traçabilité complète : pourquoi l'IA a-t-elle produit cette recommandation ? Qui a décidé quoi, quand, et sur quelle base ?" />
 
       {!events ? (

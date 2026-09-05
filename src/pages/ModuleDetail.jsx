@@ -74,7 +74,7 @@ export default function ModuleDetail() {
   if (!module) return <div className="p-10"><div className="h-6 w-64 bg-muted rounded animate-pulse" /></div>;
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
+    <div className="w-full p-0">
       <Button variant="ghost" size="sm" onClick={() => navigate("/modules")} className="mb-4 -ml-2 text-muted-foreground">
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Module Registry
       </Button>

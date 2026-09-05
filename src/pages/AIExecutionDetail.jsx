@@ -32,7 +32,7 @@ export default function AIExecutionDetail() {
     : "";
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl mx-auto">
+    <div className="w-full p-0">
       <Button variant="ghost" size="sm" onClick={() => navigate("/executions")} className="mb-4 -ml-2 text-muted-foreground">
         <ArrowLeft className="h-4 w-4 mr-1.5" /> AI Executions
       </Button>
