@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { AUTH_ENABLED } from '@/config/runtime';
 
 const AuthContext = createContext();
 
@@ -17,6 +18,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkUserAuth = async () => {
+    if (!AUTH_ENABLED) {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      setAuthError(null);
+      setIsAuthenticated(true);
+      return;
+    }
+
     try {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.getCurrentUser();

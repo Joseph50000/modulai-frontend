@@ -11,7 +11,7 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: ['.manus.computer', '.loca.lt', '.trycloudflare.com', 'localhost', '127.0.0.1'],
     proxy: {
-      '/api': 'http://127.0.0.1:3000',
+      '/api': 'http://localhost:3000',
     },
   },
   resolve: {

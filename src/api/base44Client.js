@@ -3,6 +3,7 @@ import axios from 'axios';
 // Instance Axios pointant vers notre futur backend Node.js
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
+  timeout: 10000,
 });
 
 // Ajout automatique du token d'authentification s'il existe

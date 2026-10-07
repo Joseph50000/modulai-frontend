@@ -2,6 +2,7 @@ const configuredApiUrl = import.meta.env.VITE_API_URL || '/api';
 
 export const API_URL = configuredApiUrl.replace(/\/$/, '');
 export const AI_CORE_URL = (import.meta.env.VITE_AI_CORE_URL || 'http://localhost:8001').replace(/\/$/, '');
+export const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
 
 export const dynamicGatewayUrl = (path = '') => {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -21,6 +22,7 @@ export const publicGatewayUrl = (path = '') => {
 export default {
   API_URL,
   AI_CORE_URL,
+  AUTH_ENABLED,
   dynamicGatewayUrl,
   publicGatewayUrl,
 };
