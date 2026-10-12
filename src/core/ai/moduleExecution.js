@@ -33,19 +33,18 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
     const res = await api.post(`/dynamic/${endpointPath}`, inputData, {
       headers: {
         'x-project-id': projectId || ''
-      }
+      },
+      timeout: 180000
     });
     const data = res.data;
     if (data.status !== "success") {
       throw new Error(data.error || data.message || "Le AI Core n’a pas pu générer de réponse.");
     }
 
-    // Le Gateway ou l'AI Core a créé l'enregistrement dans AIExecution.
-    // Mais on doit retourner le résultat formaté pour le composant UseCaseRunner.
-    // L'AI Core renvoie: { status: 'success', result: '{...json...}', rag_context_used: bool }
-    
-    // On parse le résultat s'il s'agit d'un JSON texte renvoyé par le LLM
-    let parsedOutput = data.result;
+    // 3. Formater la sortie retournée
+    // Si l'endpoint dynamique a renvoyé directement l'objet métier (NLP, RAG, Analytics, Audio)
+    // sans l'envelopper dans data.result, on utilise data comme sortie structurée.
+    let parsedOutput = data.result !== undefined ? data.result : data;
     try {
       if (typeof parsedOutput === 'string') {
         parsedOutput = JSON.parse(parsedOutput);
@@ -53,19 +52,26 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
     } catch (e) { /* ignore */ }
 
     // On récupère le dernier log de la DB (car le gateway l'a inséré)
-    // C'est un peu un hack, l'idéal serait que l'API nous retourne l'ID de l'exécution
     const executions = await base44.entities.AIExecution.list("-created_date", 1);
     const lastExecution = executions.length > 0 ? executions[0] : null;
 
+    if (!parsedOutput && lastExecution?.output) {
+      parsedOutput = typeof lastExecution.output === 'string'
+        ? (() => { try { return JSON.parse(lastExecution.output); } catch (_) { return lastExecution.output; } })()
+        : lastExecution.output;
+    }
+
+    const executionId = res.headers?.['x-execution-id'] || lastExecution?.id || "unknown";
+
     return {
       status: "success",
-      execution_id: lastExecution ? lastExecution.id : "unknown",
-      execution_time: lastExecution ? lastExecution.execution_time : data.execution_time || 0,
-      prompt: { name: useCaseKey, version: lastExecution?.prompt_version || "1.0.0" },
+      execution_id: executionId,
+      execution_time: lastExecution ? lastExecution.execution_time : (data.execution_time_ms || data.execution_time || 0),
+      prompt: { name: lastExecution?.prompt_name || useCaseKey, version: lastExecution?.prompt_version || "1.0.0" },
       provider: lastExecution?.provider || provider || "ModulAI Core",
       output: parsedOutput,
       context_summary: {
-        "base_de_donnees": data.rag_context_used
+        "base_de_donnees": data.rag_context_used || Boolean(data.historical_sources?.length || data.documentary_sources?.length)
       }
     };
   } catch (e) {
@@ -74,5 +80,5 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
     throw new Error(errorMessage);
   }
 }
-export const SchemaTypes = ["string", "number", "boolean", "array", "object"];
-export const FIELD_TYPES = ["string", "number", "boolean", "array", "object"];
+export const SchemaTypes = ["string", "number", "boolean", "array", "object", "file", "audio"];
+export const FIELD_TYPES = ["string", "number", "boolean", "array", "object", "file", "audio"];

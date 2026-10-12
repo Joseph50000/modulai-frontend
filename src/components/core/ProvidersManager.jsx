@@ -14,7 +14,8 @@ import { hashSecret, testProviderConnection } from "@/core/ai/coreConfig";
 
 const TYPES = [
   { value: "mock", label: "Mock (local, sans coût)" },
-  { value: "openai", label: "OpenAI" },
+  { value: "groq", label: "Groq (Whisper Audio & LLM)" },
+  { value: "openai", label: "OpenAI (Whisper & GPT)" },
   { value: "anthropic", label: "Anthropic" },
   { value: "gemini", label: "Google Gemini" },
   { value: "azure_openai", label: "Azure OpenAI" },
@@ -33,14 +34,24 @@ export default function ProvidersManager() {
   const save = async (data) => {
     if (editing?.id) {
       const patch = { name: data.name, type: data.type, endpoint_url: data.endpoint_url, status: data.status };
-      if (data.api_key) {
-        patch.secret_hash = await hashSecret(data.api_key);
+      if (data.api_key && data.api_key.trim()) {
+        patch.api_key = data.api_key.trim();
+        patch.secret_hash = await hashSecret(data.api_key.trim());
         patch.api_key_set = true;
       }
       await base44.entities.AiProvider.update(editing.id, patch);
       toast({ title: "Provider mis à jour" });
     } else {
-      const rec = { name: data.name, type: data.type, endpoint_url: data.endpoint_url, status: data.status, secret_hash: data.api_key ? await hashSecret(data.api_key) : "", api_key_set: !!data.api_key, last_test_status: "unknown" };
+      const rec = {
+        name: data.name,
+        type: data.type,
+        endpoint_url: data.endpoint_url,
+        status: data.status,
+        api_key: data.api_key ? data.api_key.trim() : null,
+        secret_hash: data.api_key ? await hashSecret(data.api_key.trim()) : "",
+        api_key_set: !!(data.api_key && data.api_key.trim()),
+        last_test_status: "unknown"
+      };
       await base44.entities.AiProvider.create(rec);
       toast({ title: "Provider créé" });
     }
@@ -102,8 +113,15 @@ function ProviderDialog({ initial, onClose, onSave }) {
         </div>
         <div><Label>Endpoint URL (optionnel)</Label><Input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="https://api.openai.com/v1" /></div>
         <div><Label>Clé d'API {initial.id ? "(laisser vide pour ne pas changer)" : ""}</Label>
-          <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-…" />
-          <p className="text-xs text-muted-foreground mt-1">La clé est hachée (SHA-256) et jamais réaffichée.</p>
+          <Input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={initial.api_key_set ? "•••••••••••••••• (Clé configurée — laisser vide pour conserver)" : "sk-… ou clé API"}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            {initial.api_key_set ? "Une clé est déjà enregistrée. Saisissez une nouvelle clé pour la remplacer." : "La clé d'authentification pour joindre le provider."}
+          </p>
         </div>
         <div><Label>Statut</Label>
           <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Actif</SelectItem><SelectItem value="disabled">Désactivé</SelectItem></SelectContent></Select>
