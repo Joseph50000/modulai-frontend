@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Cpu, Blocks, ShieldCheck, Plus, ArrowLeft, ArrowRight, Package, Zap, KeyRound, Archive, RefreshCw } from "lucide-react";
+import { Cpu, Blocks, ShieldCheck, Plus, ArrowLeft, ArrowRight, Package, Zap, KeyRound, Archive, RefreshCw, Layers } from "lucide-react";
 import { PROVIDER_OPTIONS, DEFAULT_PROVIDER } from "@/lib/platform";
 import UseCaseRunner from "@/components/projects/UseCaseRunner";
 import ProjectCoreConfig from "@/components/core/ProjectCoreConfig";
@@ -165,37 +165,65 @@ export default function ProjectDetail() {
 
       <Separator className="my-8" />
 
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-heading font-semibold flex items-center gap-2"><Zap className="h-5 w-5" /> Use Cases IA</h2>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div>
+          <h2 className="text-lg font-heading font-semibold flex items-center gap-2">
+            <Zap className="h-5 w-5 text-primary" /> Use Cases IA Disponibles
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Fonctionnalités exposées par les modules installés sur ce projet. Pour concevoir ou enrichir un Use Case, ouvrez le module correspondant.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/modules">
+            <Blocks className="h-4 w-4 mr-1.5" /> Gérer les Modules
+          </Link>
+        </Button>
       </div>
       {useCases.length === 0 ? (
-        <EmptyState icon={Zap} title="Aucun Use Case exécutable" description="Installez un module avec des Use Cases définis, puis exécutez-les : le Core lit la définition du module.">
-          <Button asChild variant="outline"><Link to="/modules">Parcourir le Registry</Link></Button>
+        <EmptyState icon={Zap} title="Aucun Use Case disponible" description="Installez un module métier depuis le Module Registry pour activer ses Use Cases dans ce projet.">
+          <Button asChild>
+            <Link to="/modules">
+              <Blocks className="h-4 w-4 mr-1.5" /> Parcourir le Module Registry
+            </Link>
+          </Button>
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {useCases.map(({ moduleRef, moduleRecord, uc }) => (
-            <Card key={moduleRef.module_id + uc.key} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-medium text-sm">{uc.name}</h3>
-                  <Badge variant="outline" className="font-mono text-xs">{uc.key}</Badge>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5">{moduleRecord.name} v{moduleRef.version}</div>
-                {uc.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{uc.description}</p>}
-                
-                {moduleRecord.lifecycle === "archived" ? (
-                  <Button size="sm" className="w-full mt-4" variant="secondary" disabled>
-                    <Archive className="h-3.5 w-3.5 mr-1.5" /> Module archivé
-                  </Button>
-                ) : (
-                  <Button size="sm" className="w-full mt-4" onClick={() => setRunner({ moduleVersion: moduleRecord, useCase: uc })}>
-                    <Zap className="h-3.5 w-3.5 mr-1.5" /> Exécuter le Use Case
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {useCases.map(({ moduleRef, moduleRecord, uc }) => {
+            const isPipeline = uc.type === "pipeline" || (Array.isArray(uc.steps) && uc.steps.length > 0);
+            return (
+              <Card key={moduleRef.module_id + uc.key} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-medium text-sm">{uc.name}</h3>
+                    <Badge variant="outline" className="font-mono text-xs">{uc.key}</Badge>
+                    {isPipeline ? (
+                      <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 gap-1 font-medium">
+                        <Layers className="h-3 w-3" /> Pipeline ({(uc.steps || []).length} étapes)
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px] font-normal text-muted-foreground">
+                        Direct
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1.5">{moduleRecord.name} v{moduleRef.version}</div>
+                  {uc.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{uc.description}</p>}
+                  
+                  {moduleRecord.lifecycle === "archived" ? (
+                    <Button size="sm" className="w-full mt-4" variant="secondary" disabled>
+                      <Archive className="h-3.5 w-3.5 mr-1.5" /> Module archivé
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="w-full mt-4" onClick={() => setRunner({ moduleVersion: moduleRecord, useCase: uc })}>
+                      <Zap className="h-3.5 w-3.5 mr-1.5" /> Exécuter le Use Case
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

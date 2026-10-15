@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import StatusBadge from "@/components/StatusBadge";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/AuthContext";
-import { Loader2, Cpu, Check, X, ArrowRight, ShieldCheck, UploadCloud, FileAudio, FileText, Trash2, AlertCircle } from "lucide-react";
+import { Loader2, Cpu, Check, X, ArrowRight, ShieldCheck, UploadCloud, FileAudio, FileText, Trash2, AlertCircle, Layers, ChevronDown, ChevronRight } from "lucide-react";
 import { executeModuleUseCase } from "@/core/ai/moduleExecution";
 import { recordAudit } from "@/core/ai/auditTrail";
 import { Link } from "react-router-dom";
@@ -52,7 +52,11 @@ const isBooleanField = (f) => (f.type || "").toLowerCase() === "boolean";
 
 function ResultViewer({ output, useCase }) {
   const [viewRaw, setViewRaw] = useState(false);
+  const [expandedStep, setExpandedStep] = useState(null);
   const out = typeof output === 'string' ? (() => { try { return JSON.parse(output); } catch { return { raw: output }; } })() : (output || {});
+
+  const pipelineMetrics = out.pipeline_metrics || out._pipeline_metrics;
+  const stepsDetail = out.steps_detail || out.steps || {};
 
   const isAudioResult = Boolean(
     useCase?.type === 'audio' ||
@@ -99,6 +103,59 @@ function ResultViewer({ output, useCase }) {
         </pre>
       ) : (
         <div className="space-y-3">
+          {/* 0. Stepper d'Exécution du Pipeline Multi-Étapes */}
+          {pipelineMetrics && Array.isArray(pipelineMetrics.steps) && (
+            <div className="rounded-lg border bg-card p-3 space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b">
+                <span className="text-xs font-semibold flex items-center gap-1.5 text-primary">
+                  <Layers className="h-4 w-4" /> Pipeline Multi-Étapes ({pipelineMetrics.total_steps} étapes)
+                </span>
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  Durée totale : {pipelineMetrics.total_duration_ms}ms
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                {pipelineMetrics.steps.map((st, idx) => {
+                  const isExpanded = expandedStep === st.step_id;
+                  const stepResult = stepsDetail[st.step_id];
+                  return (
+                    <div key={idx} className="rounded border bg-muted/20 text-xs overflow-hidden transition-all">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedStep(isExpanded ? null : st.step_id)}
+                        className="w-full flex items-center justify-between p-2 hover:bg-muted/40 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 font-semibold text-[10px]">
+                            {idx + 1}
+                          </span>
+                          <span className="font-medium text-foreground">{st.name || st.step_id}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+                          <span>{st.duration_ms}ms</span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 uppercase font-semibold">
+                            {st.status}
+                          </span>
+                          {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </div>
+                      </button>
+
+                      {isExpanded && stepResult && (
+                        <div className="p-2.5 border-t bg-muted/40 space-y-1">
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase">Sortie JSON de l'étape :</span>
+                          <pre className="text-[11px] font-mono bg-background/80 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
+                            {JSON.stringify(stepResult, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* 1. Restitution Audio Standalone */}
           {isAudioResult && (
             <div className="rounded-lg border bg-card p-3 space-y-2.5">
@@ -374,7 +431,15 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
       if (res.status === "error") toast({ variant: "destructive", title: "Exécution échouée", description: res.error });
       else toast({ title: "Use Case exécuté", description: `${useCase.name} · exécution ${res.execution_id.slice(0, 8)}` });
     } catch (e) {
-      toast({ variant: "destructive", title: "Erreur", description: e.message });
+      setResult({
+        status: "error",
+        error: e.message,
+        execution_id: "err_" + Date.now().toString(36),
+        execution_time: 0,
+        provider: provider || "Cloud LLM",
+        output: { error: e.message }
+      });
+      toast({ variant: "destructive", title: "Erreur d'exécution IA", description: e.message });
     } finally { setRunning(false); }
   };
 
@@ -420,6 +485,11 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Cpu className="h-4 w-4" /> {useCase.name}
             <span className="text-xs text-muted-foreground font-mono font-normal">{useCase.key}</span>
+            {(useCase.type === "pipeline" || Array.isArray(useCase.steps)) && (
+              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                <Layers className="h-3 w-3" /> Pipeline ({(useCase.steps || []).length} étapes)
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -429,7 +499,16 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
               <ShieldCheck className="h-3.5 w-3.5" /> {moduleVersion.name} v{moduleVersion.version} · exécuté par le AI Core ({provider})
             </div>
             {fields.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun champ d'entrée défini — l'analyse s'appuiera sur le prompt seul.</p>
+              <div className="space-y-2">
+                <Label htmlFor="fallback-text">Texte ou données d'entrée</Label>
+                <Textarea
+                  id="fallback-text"
+                  rows={4}
+                  value={values.texte || values.text || ""}
+                  onChange={(e) => setValues({ ...values, texte: e.target.value, text: e.target.value })}
+                  placeholder="Saisissez ici le texte ou le contexte à transmettre au Use Case..."
+                />
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fields.map((f) => {
@@ -664,6 +743,17 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
               <span className="text-xs text-muted-foreground font-mono">{result.execution_id?.slice(0, 8)} · {result.execution_time}ms</span>
             </div>
             {result.prompt && <div className="text-xs text-muted-foreground">Prompt utilisé : <span className="font-mono">{result.prompt.name} v{result.prompt.version}</span> · {result.provider}</div>}
+            {(result.status === "error" || result.error) && (
+              <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-700 dark:text-rose-300 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                  Échec de l'appel au Provider IA
+                </div>
+                <p className="text-[11px] leading-relaxed font-mono whitespace-pre-wrap">
+                  {result.error || "Le Provider LLM a retourné une erreur lors de l'exécution."}
+                </p>
+              </div>
+            )}
             {((result.output?.simulation_mode || result.output?.warning) || (typeof result.output === 'object' && result.output?.warning)) && (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 space-y-1">
                 <div className="font-semibold flex items-center gap-1.5">
@@ -675,7 +765,7 @@ export default function UseCaseRunner({ open, onOpenChange, project, moduleVersi
                 </p>
               </div>
             )}
-            <ResultViewer output={result.output} useCase={useCase} />
+            {result.status !== "error" && <ResultViewer output={result.output} useCase={useCase} />}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">{result.context_summary && <span>Contexte : {Object.entries(result.context_summary).filter(([, v]) => v).map(([k]) => k).join(", ") || "aucun"}</span>}</div>
           </div>
         )}

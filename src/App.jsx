@@ -61,6 +61,7 @@ const AuthenticatedApp = () => {
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/api" element={<ProjectApi />} />
           <Route path="/core" element={<CoreAdmin />} />
+          <Route path="/core-admin" element={<Navigate to="/core" replace />} />
           <Route path="/modules" element={<ModuleRegistry />} />
           <Route path="/modules/:moduleId" element={<ModuleDetail />} />
           <Route path="/executions" element={<AIExecutions />} />

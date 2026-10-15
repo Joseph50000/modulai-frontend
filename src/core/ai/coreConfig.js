@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { base44, api } from "@/api/base44Client";
 
 export const coreConfig = {};
 export const getCoreSettings = async () => {
@@ -27,36 +27,18 @@ export const saveCoreSettings = async () => ({});
 export const hashSecret = (s) => s;
 export const testProviderConnection = async (provider) => {
   try {
-    if (!provider.endpoint_url) return { ok: true, message: "Aucun endpoint configuré." };
-    
-    const url = provider.endpoint_url.replace(/\/$/, '');
-    
-    // Si c'est un modèle de type local/Ollama, on peut tester l'endpoint /api/version
-    if (provider.type === 'local' || provider.type === 'mock') {
-      try {
-        const secret = provider.api_key || provider.secret_hash || "";
-        const res = await fetch(`${url}/api/version`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
-          }
-        });
-        
-        if (!res.ok) {
-          return { ok: false, message: `L'API a répondu avec une erreur HTTP ${res.status} ${res.statusText}` };
-        }
-        
-        const data = await res.json();
-        return { ok: true, message: `Connecté avec succès. Ollama Version : ${data.version || 'inconnue'}` };
-      } catch (err) {
-        return { ok: false, message: `Impossible de se connecter : ${err.message}. (Vérifiez l'URL ou les règles CORS)` };
-      }
-    }
-      
-    // Pour les autres providers, on fait un test générique
-    return { ok: true, message: `URL configurée. (Test approfondi non disponible pour le type ${provider.type})` };
+    if (!provider?.endpoint_url) return { ok: true, message: "Aucun endpoint configuré." };
+
+    // Test sécurisé via le proxy backend Node.js (évite les restrictions CORS du navigateur)
+    const response = await api.post('/ai/provider/test', {
+      endpoint_url: provider.endpoint_url,
+      type: provider.type,
+      api_key: provider.api_key || provider.secret_hash || provider.provider_key || "",
+    });
+
+    return response.data;
   } catch (error) {
-    return { ok: false, message: error.message };
+    const msg = error.response?.data?.message || error.message || "Erreur de connexion";
+    return { ok: false, message: msg };
   }
 };

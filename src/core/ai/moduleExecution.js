@@ -32,7 +32,9 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
   try {
     const res = await api.post(`/dynamic/${endpointPath}`, inputData, {
       headers: {
-        'x-project-id': projectId || ''
+        'x-project-id': projectId || '',
+        'x-caller': 'modulai-internal-runner',
+        'Authorization': ''
       },
       timeout: 180000
     });
@@ -50,6 +52,15 @@ export async function executeModuleUseCase({ projectId, projectName, moduleVersi
         parsedOutput = JSON.parse(parsedOutput);
       }
     } catch (e) { /* ignore */ }
+
+    if (parsedOutput && typeof parsedOutput === 'object') {
+      if (data.pipeline_metrics && !parsedOutput.pipeline_metrics) {
+        parsedOutput.pipeline_metrics = data.pipeline_metrics;
+      }
+      if (data.steps_detail && !parsedOutput.steps_detail) {
+        parsedOutput.steps_detail = data.steps_detail;
+      }
+    }
 
     // On récupère le dernier log de la DB (car le gateway l'a inséré)
     const executions = await base44.entities.AIExecution.list("-created_date", 1);
